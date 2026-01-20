@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil do Paciente - MedDash</title>
+    <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="brand">
+                <h2>Med<span>Dash</span></h2>
+            </div>
+            <nav class="menu">
+                <a href="dashboard.html" class="menu-item" aria-label="Ir para Início"><i class="fas fa-home"></i> Início</a>
+                <a href="#" class="menu-item active" aria-label="Página do Paciente"><i class="fas fa-user-injured"></i> Paciente</a>
+                <a href="#" class="menu-item" aria-label="Configurações"><i class="fas fa-cog"></i> Configurações</a>
+            </nav>
+            <div class="logout-area">
+                <a href="index.html" class="menu-item logout" aria-label="Sair do sistema"><i class="fas fa-sign-out-alt"></i> Sair</a>
+            </div>
+        </aside>
+
+        <main class="content">
+            <header class="perfil-header-top">
+                <a href="dashboard.html" class="btn-cancel" aria-label="Voltar para Dashboard"><i class="fas fa-arrow-left"></i> Voltar</a>
+                <div class="header-actions">
+                    <button onclick="abrirModalEdicao()" class="btn-edit" aria-label="Editar Perfil"><i class="fas fa-pen"></i> Editar Perfil</button>
+                    <button onclick="excluirPaciente()" class="btn-delete" aria-label="Excluir Paciente"><i class="fas fa-trash"></i> Excluir</button>
+                </div>
+            </header>
+
+            <div class="perfil-grid-layout">
+                
+                <div class="coluna-esquerda">
+                    <div class="card-detalhe">
+                        <h2 id="detalhe-nome" class="text-primary">Carregando...</h2>
+                        <div class="info-texto">
+                            <p><strong>Nascimento:</strong> <span id="detalhe-nasc">--/--/----</span></p>
+                            <p><strong>WhatsApp:</strong> <span id="detalhe-whats">--</span></p>
+                        </div>
+                    </div>
+
+                    <div class="card-info">
+                        <h3><i class="fas fa-notes-medical"></i> Anotações Clínicas</h3>
+                        
+                        <div class="input-nota-wrapper">
+                            <label for="nova-nota-texto" class="hidden-label">Nova anotação</label>
+                            <input type="text" id="nova-nota-texto" placeholder="Nova observação médica..." aria-label="Digite uma nova anotação">
+                            <button onclick="salvarNovaNota()" class="btn-primary btn-icon-only" title="Adicionar Nota" aria-label="Adicionar Nota"><i class="fas fa-plus"></i></button>
+                        </div>
+
+                        <div id="historico-notas" class="historico-notas-container">
+                            <p class="text-muted-small">Carregando anotações...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="coluna-direita">
+                    <div class="card-grafico">
+                        <div class="filtros-grafico-header">
+                            <h3>Adesão ao Tratamento</h3>
+                            <div class="botoes-filtro">
+                                <button class="btn-filtro active" onclick="atualizarPeriodo(7, this)" aria-label="Filtrar por 7 dias">7 Dias</button>
+                                <button class="btn-filtro" onclick="atualizarPeriodo(30, this)" aria-label="Filtrar por 30 dias">30 Dias</button>
+                                <button class="btn-filtro" onclick="atualizarPeriodo(90, this)" aria-label="Filtrar por 90 dias">90 Dias</button>
+                            </div>
+                        </div>
+                        
+                        <div class="canvas-container">
+                            <canvas id="graficoAdesao" aria-label="Gráfico de adesão ao medicamento" role="img"></canvas>
+                        </div>
+                        
+                        <h4 class="titulo-historico">Histórico Recente</h4>
+                        <div id="lista-diaria-log" class="log-container"></div>
+                    </div>
+
+                    <div class="card-remedios">
+                        <h3><i class="fas fa-pills"></i> Medicamentos</h3>
+                        <div id="lista-controle-remedios"></div>
+
+                        <div class="novo-remedio-form">
+                            <h4>Novo Medicamento</h4>
+                            
+                            <label for="remedio-nome" class="hidden-label">Nome do Remédio</label>
+                            <input type="text" id="remedio-nome" placeholder="Nome do Remédio" aria-label="Nome do Remédio">
+                            
+                            <div id="container-horarios" class="horarios-wrapper">
+                                <label for="hora-inicial" class="hidden-label">Horário</label>
+                                <input type="time" id="hora-inicial" class="input-hora" required aria-label="Horário do remédio">
+                            </div>
+                            
+                            <button type="button" onclick="addInputHora()" class="btn-text-action" aria-label="Adicionar mais um horário">+ Adicionar Horário</button>
+                            
+                            <label for="foto-remedio" class="hidden-label">Foto do Remédio</label>
+                            <input type="file" id="foto-remedio" accept="image/*" class="input-file-small" aria-label="Carregar foto do remédio">
+                            
+                            <button onclick="salvarNovoRemedio()" class="btn-success mt-10">Salvar Medicamento</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="modal-editar-paciente" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-content">
+            <h3 id="modal-title">Editar Dados do Paciente</h3>
+            <form onsubmit="atualizarPerfil(event)">
+                <div class="form-group">
+                    <label for="edit-nome">Nome</label>
+                    <input type="text" id="edit-nome" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-whats">WhatsApp</label>
+                    <input type="text" id="edit-whats" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-nasc">Data de Nascimento</label>
+                    <input type="date" id="edit-nasc" required>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" onclick="fecharModalEdicao()" class="btn-cancel">Cancelar</button>
+                    <button type="submit" class="btn-success">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+<div id="modal-editar-remedio" class="modal">
+    <div class="modal-content">
+        <h3>Editar Medicamento</h3>
+        <input type="hidden" id="edit-remedio-id">
+        
+        <div class="form-group">
+            <label for="edit-remedio-nome">Nome do Medicamento</label>
+            <input type="text" id="edit-remedio-nome" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="edit-remedio-horario">Horário</label>
+            <input type="time" id="edit-remedio-horario" required>
+        </div>
+        
+        <div class="modal-actions">
+            <button onclick="document.getElementById('modal-editar-remedio').style.display='none'" class="btn-cancel">Cancelar</button>
+            <button onclick="salvarEdicaoRemedio()" class="btn-success">Salvar Alterações</button>
+        </div>
+    </div>
+</div>
+
+
+    <script src="script-perfil.js"></script>
+</body>
+</html>

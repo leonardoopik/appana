@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedDash - Acesso</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+    <div class="auth-box">
+        <h2>Med<span>Dash</span></h2>
+        <p>Gestão de Pacientes & Adesão</p>
+
+        <div id="login-section">
+            <form onsubmit="fazerLogin(event)">
+                <div class="input-group">
+                    <label for="login-email">E-mail Profissional</label>
+                    <input type="email" id="login-email" placeholder="medico@exemplo.com" required>
+                </div>
+                <div class="input-group">
+                    <label for="login-password">Senha</label>
+                    <input type="password" id="login-password" placeholder="Sua Senha" required>
+                </div>
+                <button type="submit" class="btn-primary">Entrar</button>
+            </form>
+            
+            <div class="auth-footer">
+                <p>Não tem conta? <a href="#" onclick="mostrarCadastro()" class="link-destaque">Cadastre-se</a></p>
+                <a href="#" onclick="mostrarRecuperar()" class="link-suave">Esqueci minha senha</a>
+            </div>
+        </div>
+
+        <div id="forgot-section" class="hidden">
+            <h3>Recuperar Senha</h3>
+            <p>Digite seu e-mail para definir uma nova senha.</p>
+            <form onsubmit="recuperarSenha(event)">
+                <div class="input-group">
+                    <label for="forgot-email">E-mail Profissional</label>
+                    <input type="email" id="forgot-email" placeholder="medico@exemplo.com" required>
+                </div>
+                <div class="input-group">
+                    <label for="new-password">Nova Senha</label>
+                    <input type="password" id="new-password" placeholder="Mínimo 8 caracteres" required>
+                </div>
+                <button type="submit" class="btn-primary">Redefinir Senha</button>
+            </form>
+            <p class="mt-20"><a href="#" onclick="voltarLogin()" class="btn-cancel">Voltar ao Login</a></p>
+        </div>
+
+        <div id="register-section" class="hidden">
+            <h3>Criar Conta Médica</h3>
+            <form onsubmit="registrarMedico(event)">
+                <div class="input-group">
+                    <label for="reg-name">Nome Completo</label>
+                    <input type="text" id="reg-name" placeholder="Dr(a). Nome Sobrenome" required>
+                </div>
+                <div class="input-group">
+                    <label for="reg-crm">CRM</label>
+                    <input type="text" id="reg-crm" placeholder="000000-UF" required>
+                </div>
+                <div class="input-group">
+                    <label for="reg-email">E-mail Profissional</label>
+                    <input type="email" id="reg-email" placeholder="medico@exemplo.com" required>
+                </div>
+                <div class="input-group">
+                    <label for="reg-password">Senha</label>
+                    <input type="password" id="reg-password" placeholder="Mínimo 8 caracteres" required>
+                </div>
+                <button type="submit" class="btn-primary">Finalizar Cadastro</button>
+            </form>
+            <p class="mt-20">Já é cadastrado? <a href="#" onclick="voltarLogin()" class="link-destaque">Fazer Login</a></p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

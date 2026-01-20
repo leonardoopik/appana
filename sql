@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS medicos (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    crm VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    senha TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS pacientes (
+    id SERIAL PRIMARY KEY,
+    medico_id INTEGER REFERENCES medicos(id),
+    nome VARCHAR(255) NOT NULL,
+    whatsapp VARCHAR(20) NOT NULL,
+    status_adesao INTEGER DEFAULT 100
+);
