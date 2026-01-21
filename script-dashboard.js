@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000';
+const API_URL = 'https://appana-xlcl.onrender.com';
 const medicoId = localStorage.getItem('medicoId');
 const medicoNome = localStorage.getItem('medicoNome');
 
