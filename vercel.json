@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "*.html", "use": "@vercel/static" },
+    { "src": "*.css", "use": "@vercel/static" },
+    { "src": "script*.js", "use": "@vercel/static" },
+    { "src": "uploads/*", "use": "@vercel/static" }
+  ]
+}
