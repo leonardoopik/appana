@@ -117,5 +117,34 @@ td {
     font-weight: 600;
 }
 
+
+/* --- Estilos para a Barra de Pesquisa --- */
+.search-box {
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.input-pesquisa {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+/* --- Estilos para o Campo Gestor --- */
+.input-gestor {
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+
+.texto-ajuda {
+    color: gray;
+    font-size: 0.8em;
+    margin-top: 5px;
+    display: block;
+}
+
+
+
 .status-ok { background: #e6f4ea; color: #1e8e3e; }
 .status-bad { background: #fce8e6; color: #d93025; }

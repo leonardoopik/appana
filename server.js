@@ -90,11 +90,11 @@ app.get('/pacientes-por-medico/:medicoId', async (req, res) => {
 });
 
 app.post('/pacientes', async (req, res) => {
-    const { medicoId, nome, whatsapp, data_nascimento } = req.body;
+    const { medicoId, nome, whatsapp, data_nascimento, gestor } = req.body;
     try {
         await pool.query(
-            'INSERT INTO pacientes (medico_id, nome, whatsapp, data_nascimento) VALUES ($1, $2, $3, $4)',
-            [medicoId, nome, whatsapp, data_nascimento]
+            'INSERT INTO pacientes (medico_id, nome, whatsapp, data_nascimento, gestor) VALUES ($1, $2, $3, $4, $5)',
+            [medicoId, nome, whatsapp, data_nascimento, gestor]
         );
         res.status(201).json({ message: "Paciente cadastrado!" });
     } catch (err) {

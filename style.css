@@ -509,6 +509,45 @@ button { font-family: inherit; font-weight: 600; cursor: pointer; transition: al
 
 
 
+/* --- Barra de Pesquisa (Nova) --- */
+.search-box {
+    margin-bottom: 20px;
+    background: #fff;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.input-pesquisa {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.input-pesquisa:focus {
+    border-color: #3b82f6; /* Cor azul do tema */
+}
+
+/* --- Campo Gestor (Novo) --- */
+.input-gestor {
+    letter-spacing: 3px;
+    font-weight: bold;
+    color: #2c3e50;
+    text-align: center;
+    background-color: #f8fafc;
+}
+
+.texto-ajuda {
+    display: block;
+    margin-top: 4px;
+    color: #94a3b8;
+    font-size: 0.85em;
+}
+
 .btn-mini:hover { opacity: 1; transform: scale(1.1); }
 .btn-mini.edit { color: var(--warning); }
 .btn-mini.del { color: var(--danger); }
