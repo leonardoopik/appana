@@ -2,6 +2,7 @@ const API_URL = 'https://appana-xlcl.onrender.com';
 const pacienteId = localStorage.getItem('pacienteSelecionadoId');
 let meuGrafico = null;
 let diasFiltro = 7;
+let dadosPacienteAtual = null; // Variável para guardar os dados do paciente
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!pacienteId) {
@@ -19,16 +20,25 @@ async function carregarDadosPerfil() {
     try {
         const response = await fetch(`${API_URL}/perfil-paciente/${pacienteId}`);
         const data = await response.json();
+        
+        // Guarda os dados na memória para usar na edição depois
+        dadosPacienteAtual = data.info;
 
         // Dados Pessoais
         document.getElementById('detalhe-nome').innerText = data.info.nome;
         document.getElementById('detalhe-nasc').innerText = data.info.data_nascimento ? 
             new Date(data.info.data_nascimento).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '---';
         document.getElementById('detalhe-whats').innerText = data.info.whatsapp;
+        
+        // Tenta preencher o Gestor na tela principal (caso você tenha criado o elemento <span id="detalhe-gestor">)
+        const gestorDisplay = document.getElementById('detalhe-gestor');
+        if(gestorDisplay) {
+            gestorDisplay.innerText = data.info.gestor || '---';
+        }
 
         // Renderização
         renderizarNotas(data.anotacoes);
-        renderizarControleRemedios(data.medicamentos); // Função Nova
+        renderizarControleRemedios(data.medicamentos);
         gerarGraficoAdesao(data.historico);
         renderizarLogDiario(data.historico);
         
@@ -139,7 +149,6 @@ function renderizarControleRemedios(remedios) {
         return;
     }
 
-    // 1. Agrupamento
     const grupos = {};
     remedios.forEach(r => {
         const nomeChave = r.nome_remedio.trim().toLowerCase();
@@ -153,12 +162,10 @@ function renderizarControleRemedios(remedios) {
         grupos[nomeChave].horarios.push({ id: r.id, hora: r.horario });
     });
 
-    // 2. Ordenação dos horários
     Object.values(grupos).forEach(grupo => {
         grupo.horarios.sort((a, b) => a.hora.localeCompare(b.hora));
     });
 
-    // 3. Renderização
     lista.innerHTML = Object.values(grupos).map(grupo => `
         <div class="card-remedio-agrupado">
             <div class="remedio-header">
@@ -193,7 +200,6 @@ function renderizarControleRemedios(remedios) {
     `).join('');
 }
 
-// Funções de Gerenciamento de Remédios
 async function excluirRemedio(id) {
     if(!confirm("Excluir este horário de medicamento?")) return;
     try {
@@ -324,12 +330,21 @@ async function registrarDose(id, status) {
 }
 
 // ==========================================
-// 5. MODAIS DE PERFIL
+// 5. MODAIS DE PERFIL (ATUALIZADO COM GESTOR)
 // ==========================================
 
 function abrirModalEdicao() {
-    document.getElementById('edit-nome').value = document.getElementById('detalhe-nome').innerText;
-    document.getElementById('edit-whats').value = document.getElementById('detalhe-whats').innerText;
+    // Usa os dados globais que buscamos no carregarDadosPerfil
+    if(dadosPacienteAtual) {
+        document.getElementById('edit-nome').value = dadosPacienteAtual.nome;
+        document.getElementById('edit-whats').value = dadosPacienteAtual.whatsapp;
+        document.getElementById('edit-gestor').value = dadosPacienteAtual.gestor || ''; // Preenche o Gestor
+        
+        // Formata a data para o input date (YYYY-MM-DD)
+        if(dadosPacienteAtual.data_nascimento) {
+            document.getElementById('edit-nasc').value = dadosPacienteAtual.data_nascimento.split('T')[0];
+        }
+    }
     document.getElementById('modal-editar-paciente').style.display = 'flex';
 }
 
@@ -337,18 +352,43 @@ function fecharModalEdicao() { document.getElementById('modal-editar-paciente').
 
 async function atualizarPerfil(event) {
     event.preventDefault();
+    
+    // Pegando valores
+    const gestor = document.getElementById('edit-gestor').value;
+    const nome = document.getElementById('edit-nome').value;
+    const whatsapp = document.getElementById('edit-whats').value;
+    const data_nascimento = document.getElementById('edit-nasc').value;
+
+    // --- Validação do Gestor ---
+    if (gestor.length !== 5) {
+        alert("O código do Gestor deve ter 5 números!");
+        return;
+    }
+
     const dados = {
-        nome: document.getElementById('edit-nome').value,
-        whatsapp: document.getElementById('edit-whats').value,
-        data_nascimento: document.getElementById('edit-nasc').value
+        nome: nome,
+        whatsapp: whatsapp,
+        data_nascimento: data_nascimento,
+        gestor: gestor // Adicionado ao envio
     };
-    await fetch(`${API_URL}/pacientes/${pacienteId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dados)
-    });
-    fecharModalEdicao();
-    carregarDadosPerfil();
+
+    try {
+        const response = await fetch(`${API_URL}/pacientes/${pacienteId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+
+        if(response.ok) {
+            fecharModalEdicao();
+            carregarDadosPerfil(); // Recarrega a tela para mostrar os dados novos
+        } else {
+            alert("Erro ao atualizar perfil.");
+        }
+    } catch (error) {
+        alert("Erro de conexão.");
+        console.error(error);
+    }
 }
 
 async function excluirPaciente() {

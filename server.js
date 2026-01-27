@@ -104,11 +104,11 @@ app.post('/pacientes', async (req, res) => {
 
 app.put('/pacientes/:id', async (req, res) => {
     const { id } = req.params;
-    const { nome, whatsapp, data_nascimento } = req.body;
+    const { nome, whatsapp, data_nascimento, gestor } = req.body;
     try {
         await pool.query(
-            'UPDATE pacientes SET nome = $1, whatsapp = $2, data_nascimento = $3 WHERE id = $4',
-            [nome, whatsapp, data_nascimento, id]
+            'UPDATE pacientes SET nome = $1, whatsapp = $2, data_nascimento = $3, gestor = $4 WHERE id = $5',
+            [nome, whatsapp, data_nascimento, gestor, id]
         );
         res.json({ message: "Perfil atualizado!" });
     } catch (err) {
