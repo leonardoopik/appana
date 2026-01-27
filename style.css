@@ -548,6 +548,13 @@ button { font-family: inherit; font-weight: 600; cursor: pointer; transition: al
     font-size: 0.85em;
 }
 
+/* Estilo para o número do Gestor */
+.destaque-gestor {
+    font-weight: bold;
+    color: #475569; /* Cor cinza azulado profissional */
+}
+
+
 .btn-mini:hover { opacity: 1; transform: scale(1.1); }
 .btn-mini.edit { color: var(--warning); }
 .btn-mini.del { color: var(--danger); }

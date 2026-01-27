@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perfil do Paciente - MedDash</title>
     <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -42,7 +42,8 @@
                         <div class="info-texto">
                             <p><strong>Nascimento:</strong> <span id="detalhe-nasc">--/--/----</span></p>
                             <p><strong>WhatsApp:</strong> <span id="detalhe-whats">--</span></p>
-                        </div>
+                            
+<p><strong>Gestor:</strong> <span id="detalhe-gestor" class="destaque-gestor">---</span></p>                            </div>
                     </div>
 
                     <div class="card-info">
@@ -126,20 +127,20 @@
                     <input type="date" id="edit-nasc" required>
                 </div>
                 
-<div class="form-group">
-    <label for="edit-gestor">Gestor</label>
-    <input 
-        type="text" 
-        id="edit-gestor" 
-        class="input-gestor" 
-        placeholder="Ex: 12345" 
-        maxlength="5" 
-        pattern="\d{5}"
-        inputmode="numeric"
-        oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-        required
-    >
-</div>
+                <div class="form-group">
+                    <label for="edit-gestor">Gestor</label>
+                    <input 
+                        type="text" 
+                        id="edit-gestor" 
+                        class="input-gestor" 
+                        placeholder="Ex: 12345" 
+                        maxlength="5" 
+                        pattern="\d{5}"
+                        inputmode="numeric"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                        required
+                    >
+                </div>
 
                 <div class="modal-actions">
                     <button type="button" onclick="fecharModalEdicao()" class="btn-cancel">Cancelar</button>
@@ -149,29 +150,27 @@
         </div>
     </div>
 
-
-<div id="modal-editar-remedio" class="modal">
-    <div class="modal-content">
-        <h3>Editar Medicamento</h3>
-        <input type="hidden" id="edit-remedio-id">
-        
-        <div class="form-group">
-            <label for="edit-remedio-nome">Nome do Medicamento</label>
-            <input type="text" id="edit-remedio-nome" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="edit-remedio-horario">Horário</label>
-            <input type="time" id="edit-remedio-horario" required>
-        </div>
-        
-        <div class="modal-actions">
-            <button onclick="document.getElementById('modal-editar-remedio').style.display='none'" class="btn-cancel">Cancelar</button>
-            <button onclick="salvarEdicaoRemedio()" class="btn-success">Salvar Alterações</button>
+    <div id="modal-editar-remedio" class="modal">
+        <div class="modal-content">
+            <h3>Editar Medicamento</h3>
+            <input type="hidden" id="edit-remedio-id">
+            
+            <div class="form-group">
+                <label for="edit-remedio-nome">Nome do Medicamento</label>
+                <input type="text" id="edit-remedio-nome" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="edit-remedio-horario">Horário</label>
+                <input type="time" id="edit-remedio-horario" required>
+            </div>
+            
+            <div class="modal-actions">
+                <button onclick="document.getElementById('modal-editar-remedio').style.display='none'" class="btn-cancel">Cancelar</button>
+                <button onclick="salvarEdicaoRemedio()" class="btn-success">Salvar Alterações</button>
+            </div>
         </div>
     </div>
-</div>
-
 
     <script src="script-perfil.js"></script>
 </body>
