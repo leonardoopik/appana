@@ -6,39 +6,60 @@
     <title>Recuperar Senha</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="auth-page">
+
     <div class="login-container">
         <h2>Recuperar Senha</h2>
-        <input type="email" id="email-recuperar" placeholder="Seu e-mail cadastrado" required>
-        <button onclick="pedirLink()">Enviar Link</button>
-        <a href="index.html">Voltar</a>
+        
+        <p class="texto-instrucao">Digite seu e-mail para receber o link.</p>
+        
+        <input type="email" id="email-recuperar" placeholder="exemplo@email.com" required>
+        
+        <button onclick="pedirLink()" id="btn-acao" class="btn-enviar">Enviar Link</button>
+        
+        <a href="index.html" class="link-voltar">Voltar para Login</a>
     </div>
 
     <script>
         async function pedirLink() {
             const email = document.getElementById('email-recuperar').value;
-            const API_URL = 'https://appana-xlcl.onrender.com'; // Seu backend
-
+            const btn = document.getElementById('btn-acao');
+            
             if (!email) {
                 alert("Por favor, digite seu e-mail.");
                 return;
             }
 
+            // Feedback visual
+            const textoOriginal = btn.innerText;
+            btn.innerText = "Enviando...";
+            btn.disabled = true;
+
+            const API_URL = 'https://appana-xlcl.onrender.com';
+
             try {
+                console.log("Tentando enviar para:", email);
+
                 const res = await fetch(API_URL + '/auth/esqueci-senha', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ email })
                 });
 
+                const data = await res.json();
+
                 if(res.ok) {
-                    alert("Verifique seu e-mail! Enviamos um link de recuperação.");
+                    alert("Sucesso! Verifique seu e-mail (inclusive a caixa de Spam).");
+                    window.location.href = 'index.html';
                 } else {
-                    const data = await res.json();
-                    alert("Erro: " + (data.error || "Tente novamente."));
+                    alert("Erro: " + (data.error || "Não foi possível enviar."));
                 }
             } catch (error) {
-                alert("Erro de conexão com o servidor.");
+                console.error(error);
+                alert("Erro de conexão. O servidor pode estar dormindo. Tente de novo.");
+            } finally {
+                btn.innerText = textoOriginal;
+                btn.disabled = false;
             }
         }
     </script>
