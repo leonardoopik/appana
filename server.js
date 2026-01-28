@@ -43,19 +43,20 @@ pool.connect((err) => {
 // CONFIGURAÇÃO DO E-MAIL (NODEMAILER)
 // ==========================================
 // ==========================================
-// CONFIGURAÇÃO DO E-MAIL (CORRIGIDO)
+// CONFIGURAÇÃO DO E-MAIL (MODO OFFICE 365)
 // ==========================================
 const transporter = nodemailer.createTransport({
-    host: "smtp-mail.outlook.com", // Servidor oficial da Microsoft
-    port: 587,                     // Porta que o Render permite
-    secure: false,                 // false para porta 587 (usa STARTTLS)
+    host: "smtp.office365.com", // Trocamos o endereço
+    port: 587,
+    secure: false, // STARTTLS
+    requireTLS: true, // Força o uso de segurança
     auth: {
         user: 'meddashapp@hotmail.com',
-        pass: 'appana123'          // <--- IMPORTANTE: COLOQUE A SENHA REAL AQUI!
+        pass: 'SUA_SENHA_REAL_AQUI' // <--- COLOQUE A SENHA!!!
     },
     tls: {
-        ciphers: 'SSLv3',          // Ajuda na compatibilidade
-        rejectUnauthorized: false  // Evita erros de certificado na nuvem
+        ciphers: 'SSLv3',
+        rejectUnauthorized: false
     }
 });
 // ==========================================
