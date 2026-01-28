@@ -555,6 +555,23 @@ button { font-family: inherit; font-weight: 600; cursor: pointer; transition: al
 }
 
 
+/* Estilo do Dropdown do Gráfico */
+.select-filtro {
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid #cbd5e1;
+    background-color: white;
+    color: #475569;
+    font-size: 0.9rem;
+    cursor: pointer;
+    outline: none;
+}
+
+.select-filtro:focus {
+    border-color: #3b82f6;
+}
+
+
 .btn-mini:hover { opacity: 1; transform: scale(1.1); }
 .btn-mini.edit { color: var(--warning); }
 .btn-mini.del { color: var(--danger); }

@@ -63,14 +63,21 @@
 
                 <div class="coluna-direita">
                     <div class="card-grafico">
-                        <div class="filtros-grafico-header">
-                            <h3>Adesão ao Tratamento</h3>
-                            <div class="botoes-filtro">
-                                <button class="btn-filtro active" onclick="atualizarPeriodo(7, this)" aria-label="Filtrar por 7 dias">7 Dias</button>
-                                <button class="btn-filtro" onclick="atualizarPeriodo(30, this)" aria-label="Filtrar por 30 dias">30 Dias</button>
-                                <button class="btn-filtro" onclick="atualizarPeriodo(90, this)" aria-label="Filtrar por 90 dias">90 Dias</button>
-                            </div>
-                        </div>
+                       <div class="filtros-grafico-header" style="flex-direction: column; align-items: flex-start; gap: 10px;">
+    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+        <h3>Adesão ao Tratamento</h3>
+        
+        <select id="filtro-remedio-grafico" onchange="atualizarGrafico()" class="select-filtro">
+            <option value="todos">Todos os Remédios</option>
+        </select>
+        </div>
+
+    <div class="botoes-filtro">
+        <button class="btn-filtro active" onclick="atualizarPeriodo(7, this)">7 Dias</button>
+        <button class="btn-filtro" onclick="atualizarPeriodo(30, this)">30 Dias</button>
+        <button class="btn-filtro" onclick="atualizarPeriodo(90, this)">90 Dias</button>
+    </div>
+</div>
                         
                         <div class="canvas-container">
                             <canvas id="graficoAdesao" aria-label="Gráfico de adesão ao medicamento" role="img"></canvas>
