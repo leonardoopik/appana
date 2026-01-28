@@ -45,18 +45,61 @@ pool.connect((err) => {
 // ==========================================
 // CONFIGURAÇÃO DO E-MAIL (MODO OFFICE 365)
 // ==========================================
+// ==========================================
+// CONFIGURAÇÃO DO E-MAIL (MUDANÇA PARA GMAIL)
+// ==========================================
 const transporter = nodemailer.createTransport({
-    host: "smtp.office365.com", // Trocamos o endereço
-    port: 587,
-    secure: false, // STARTTLS
-    requireTLS: true, // Força o uso de segurança
+    service: 'gmail',
     auth: {
-        user: 'meddashapp@hotmail.com',
-        pass: 'SUA_SENHA_REAL_AQUI' // <--- COLOQUE A SENHA!!!
-    },
-    tls: {
-        ciphers: 'SSLv3',
-        rejectUnauthorized: false
+        user: 'meddashapp@gmail.com', // <--- Coloque seu Gmail
+        pass: 'srqu mvsr urrw sxin'  // <--- Aquela senha de 16 letras (sem espaços)
+    }
+});
+
+// ==========================================
+// ROTAS DE SENHA (CORRIGIDAS)
+// ==========================================
+
+// ROTA 1: SOLICITAR O LINK
+app.post('/auth/esqueci-senha', async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        const user = await pool.query("SELECT * FROM medicos WHERE email = $1", [email]);
+        if (user.rows.length === 0) {
+            return res.status(404).json({ error: "E-mail não encontrado" });
+        }
+
+        const token = crypto.randomBytes(20).toString('hex');
+        const agora = new Date();
+        agora.setHours(agora.getHours() + 1);
+
+        await pool.query(
+            "UPDATE medicos SET reset_token = $1, reset_expires = $2 WHERE email = $3",
+            [token, agora, email]
+        );
+
+        const linkRecuperacao = `https://appana.vercel.app/nova-senha.html?token=${token}`;
+
+        await transporter.sendMail({
+            from: '"MedDash App" <SEU_EMAIL_AQUI@gmail.com>', // <--- Atualize aqui também
+            to: email,
+            subject: 'Recuperação de Senha - MedDash',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Recuperação de Senha</h2>
+                    <p>Clique no botão abaixo para criar uma nova senha:</p>
+                    <a href="${linkRecuperacao}" style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Redefinir Senha</a>
+                </div>
+            `
+        });
+
+        res.json({ message: "E-mail enviado com sucesso!" });
+
+    } catch (err) {
+        console.error("Erro no envio de e-mail:", err);
+        // AQUI ESTAVA O ERRO DE SYNTAX: Agora enviamos JSON corretamente
+        res.status(500).json({ error: "Erro ao enviar e-mail. Tente novamente mais tarde." });
     }
 });
 // ==========================================
