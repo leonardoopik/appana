@@ -7,118 +7,83 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer'); // Importação única e correta
+const { Resend } = require('resend'); // <--- TROCAMOS NODEMAILER POR RESEND
 const app = express();
 
 // Middlewares
 app.use(express.json());
 app.use(cors());
 
-// Criar pasta de uploads se não existir
+// Configura o Resend com a chave que você copiou
+const resend = new Resend('re_DKtGpYAa_EQeG5kKtCCJvsJrvASpxcrwd'); // <--- COLE SUA CHAVE 're_...' AQUI!!!
+
+// Criar pasta uploads
 if (!fs.existsSync('./uploads')) {
     fs.mkdirSync('./uploads');
 }
 app.use('/uploads', express.static('uploads'));
 
-// Configuração do Multer (Upload de imagens)
+// Multer
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/'),
     filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 const upload = multer({ storage });
 
-// Configuração do Banco de Dados
+// Banco de Dados
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    }
+    ssl: { rejectUnauthorized: false }
 });
 pool.connect((err) => {
-    if (err) console.error('❌ ERRO NO POSTGRES:', err.message);
-    else console.log('✅ CONECTADO AO POSTGRES COM SUCESSO!');
-});
-
-// ==========================================
-// CONFIGURAÇÃO DO E-MAIL (GMAIL - BLINDADA PORTA 465)
-// ==========================================
-// ==========================================
-// CONFIGURAÇÃO GMAIL (TENTATIVA PORTA 587)
-// ==========================================
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,              // Porta alternativa (STARTTLS)
-    secure: false,          // false é OBRIGATÓRIO para porta 587
-    requireTLS: true,       // Força segurança após conectar
-    auth: {
-        user: 'meddashapp@gmail.com', 
-        pass: 'srqu mvsr urrw sxin'   // Sua senha de app (mantenha a mesma)
-    },
-    tls: {
-        rejectUnauthorized: false
-    }
+    if (err) console.error('❌ ERRO POSTGRES:', err.message);
+    else console.log('✅ POSTGRES CONECTADO!');
 });
 
 // ==========================================
 // 1. ROTAS DE AUTENTICAÇÃO
 // ==========================================
 
-// ROTA: LOGIN
 app.post('/login', async (req, res) => {
     const { email, senha } = req.body;
     try {
         const result = await pool.query('SELECT * FROM medicos WHERE email = $1', [email]);
         if (result.rows.length > 0) {
             const match = await bcrypt.compare(senha, result.rows[0].senha);
-            if (match) {
-                res.json({ medicoId: result.rows[0].id, nome: result.rows[0].nome });
-            } else {
-                res.status(401).json({ error: "Senha incorreta." });
-            }
+            if (match) res.json({ medicoId: result.rows[0].id, nome: result.rows[0].nome });
+            else res.status(401).json({ error: "Senha incorreta." });
         } else {
             res.status(404).json({ error: "Médico não encontrado." });
         }
-    } catch (err) {
-        res.status(500).json({ error: "Erro no servidor." });
-    }
+    } catch (err) { res.status(500).json({ error: "Erro no servidor." }); }
 });
 
-// ROTA: CADASTRO
 app.post('/auth/register', async (req, res) => {
     const { nome, email, senha } = req.body;
-
     try {
-        // 1. VERIFICAÇÃO DE DUPLICIDADE
         const userExist = await pool.query("SELECT * FROM medicos WHERE email = $1", [email]);
-        
-        if (userExist.rows.length > 0) {
-            return res.status(400).json({ error: "Este e-mail já está cadastrado!" });
-        }
+        if (userExist.rows.length > 0) return res.status(400).json({ error: "E-mail já cadastrado!" });
 
-        // 2. SE NÃO EXISTIR, CADASTRA
-        // Idealmente criptografar a senha aqui: const hashedPassword = await bcrypt.hash(senha, 10);
+        // Criptografando senha no cadastro para segurança
+        const hashedPassword = await bcrypt.hash(senha, 10);
+        
         const newUser = await pool.query(
             "INSERT INTO medicos (nome, email, senha) VALUES ($1, $2, $3) RETURNING *",
-            [nome, email, senha]
+            [nome, email, hashedPassword] 
         );
-
         res.json(newUser.rows[0]);
-
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Erro no servidor");
-    }
+    } catch (err) { res.status(500).send("Erro no servidor"); }
 });
 
-// ROTA: SOLICITAR LINK DE SENHA
+// ==========================================
+// ROTA: ESQUECI SENHA (COM RESEND)
+// ==========================================
 app.post('/auth/esqueci-senha', async (req, res) => {
     const { email } = req.body;
 
     try {
         const user = await pool.query("SELECT * FROM medicos WHERE email = $1", [email]);
-        if (user.rows.length === 0) {
-            return res.status(404).json({ error: "E-mail não encontrado" });
-        }
+        if (user.rows.length === 0) return res.status(404).json({ error: "E-mail não encontrado" });
 
         const token = crypto.randomBytes(20).toString('hex');
         const agora = new Date();
@@ -131,59 +96,47 @@ app.post('/auth/esqueci-senha', async (req, res) => {
 
         const linkRecuperacao = `https://appana.vercel.app/nova-senha.html?token=${token}`;
 
-        await transporter.sendMail({
-            from: '"MedDash App" <meddashapp@gmail.com>',
-            to: email,
+        // ENVIO PELO RESEND (Não bloqueia nunca)
+        await resend.emails.send({
+            from: 'onboarding@resend.dev', // E-mail de teste do Resend (obrigatório usar esse se não tiver domínio)
+            to: email, // ATENÇÃO: Só funciona se este email for o mesmo da sua conta Resend (no plano grátis sem domínio)
             subject: 'Recuperação de Senha - MedDash',
             html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px;">
-                    <h2>Recuperação de Senha</h2>
-                    <p>Clique no botão abaixo para criar uma nova senha:</p>
-                    <a href="${linkRecuperacao}" style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Redefinir Senha</a>
-                    <p>Este link expira em 1 hora.</p>
+                <div style="font-family: sans-serif; padding: 20px;">
+                    <h2>Recuperar Senha</h2>
+                    <p>Clique abaixo para redefinir:</p>
+                    <a href="${linkRecuperacao}" style="background: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Criar Nova Senha</a>
                 </div>
             `
         });
 
-        res.json({ message: "E-mail enviado com sucesso!" });
+        res.json({ message: "E-mail enviado!" });
 
     } catch (err) {
-        console.error("Erro no envio de e-mail:", err);
-        res.status(500).json({ error: "Erro ao enviar e-mail. Tente novamente mais tarde." });
+        console.error("Erro Resend:", err);
+        res.status(500).json({ error: "Erro ao enviar e-mail." });
     }
 });
 
-// ROTA: RESETAR SENHA
 app.post('/auth/resetar-senha', async (req, res) => {
     const { token, novaSenha } = req.body;
-
     try {
-        const user = await pool.query(
-            "SELECT * FROM medicos WHERE reset_token = $1 AND reset_expires > NOW()",
-            [token]
-        );
-
-        if (user.rows.length === 0) {
-            return res.status(400).json({ error: "Link inválido ou expirado" });
-        }
+        const user = await pool.query("SELECT * FROM medicos WHERE reset_token = $1 AND reset_expires > NOW()", [token]);
+        if (user.rows.length === 0) return res.status(400).json({ error: "Link inválido/expirado" });
 
         const hashedPassword = await bcrypt.hash(novaSenha, 10);
-
-        await pool.query(
-            "UPDATE medicos SET senha = $1, reset_token = NULL, reset_expires = NULL WHERE id = $2",
-            [hashedPassword, user.rows[0].id]
-        );
-
-        res.json({ message: "Senha alterada com sucesso!" });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("Erro ao resetar senha");
-    }
+        await pool.query("UPDATE medicos SET senha = $1, reset_token = NULL, reset_expires = NULL WHERE id = $2", [hashedPassword, user.rows[0].id]);
+        
+        res.json({ message: "Senha alterada!" });
+    } catch (err) { res.status(500).send("Erro ao resetar"); }
 });
 
+// ... (MANTENHA AS OUTRAS ROTAS DE PACIENTES/MEDICAMENTOS IGUAIS) ...
+// Copie as rotas de Pacientes, Anotações e Medicamentos do arquivo anterior e cole aqui embaixo
+// Elas não mudaram nada.
+
 // ==========================================
-// 2. ROTAS DE PACIENTES
+// 2. ROTAS DE PACIENTES (COLE AQUI O RESTANTE DO CÓDIGO)
 // ==========================================
 
 app.get('/pacientes-por-medico/:medicoId', async (req, res) => {
@@ -255,10 +208,6 @@ app.get('/perfil-paciente/:id', async (req, res) => {
     }
 });
 
-// ==========================================
-// 3. ROTAS DE ANOTAÇÕES (CRUD)
-// ==========================================
-
 app.post('/pacientes/:id/anotacoes', async (req, res) => {
     const { id } = req.params;
     const { anotacao } = req.body;
@@ -295,10 +244,6 @@ app.delete('/anotacoes/:id', async (req, res) => {
         res.status(500).json({ error: "Erro ao excluir." });
     }
 });
-
-// ==========================================
-// 4. ROTAS DE MEDICAMENTOS E DOSES
-// ==========================================
 
 app.post('/medicamentos', upload.single('foto'), async (req, res) => {
     const { pacienteId, nome_remedio, horarios } = req.body;
@@ -347,9 +292,7 @@ app.put('/medicamentos/:id', async (req, res) => {
 app.delete('/medicamentos/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        // Primeiro apaga o histórico
         await pool.query('DELETE FROM historico_remedios WHERE medicamento_id = $1', [id]);
-        // Depois apaga o remédio
         await pool.query('DELETE FROM medicamentos WHERE id = $1', [id]);
         res.json({ message: "Medicamento excluído!" });
     } catch (err) {
