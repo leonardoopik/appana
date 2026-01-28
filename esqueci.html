@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recuperar Senha</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="login-container">
+        <h2>Recuperar Senha</h2>
+        <input type="email" id="email-recuperar" placeholder="Seu e-mail cadastrado" required>
+        <button onclick="pedirLink()">Enviar Link</button>
+        <a href="index.html">Voltar</a>
+    </div>
+
+    <script>
+        async function pedirLink() {
+            const email = document.getElementById('email-recuperar').value;
+            const API_URL = 'https://appana-xlcl.onrender.com'; // Seu backend
+
+            if (!email) {
+                alert("Por favor, digite seu e-mail.");
+                return;
+            }
+
+            try {
+                const res = await fetch(API_URL + '/auth/esqueci-senha', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email })
+                });
+
+                if(res.ok) {
+                    alert("Verifique seu e-mail! Enviamos um link de recuperação.");
+                } else {
+                    const data = await res.json();
+                    alert("Erro: " + (data.error || "Tente novamente."));
+                }
+            } catch (error) {
+                alert("Erro de conexão com o servidor.");
+            }
+        }
+    </script>
+</body>
+</html>

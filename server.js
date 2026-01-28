@@ -1,4 +1,4 @@
-const PORT = process.env.PORT || 3000; // A nuvem decide a porta
+const PORT = process.env.PORT || 3000;
 const express = require('express');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
@@ -6,7 +6,8 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-
+const crypto = require('crypto');
+const nodemailer = require('nodemailer'); // <--- ADICIONADO
 const app = express();
 
 // Middlewares
@@ -19,18 +20,18 @@ if (!fs.existsSync('./uploads')) {
 }
 app.use('/uploads', express.static('uploads'));
 
-// Configuração do Multer
+// Configuração do Multer (Upload de imagens)
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/'),
     filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 const upload = multer({ storage });
 
-// Configuração do Banco
+// Configuração do Banco de Dados
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL, // A URL virá da nuvem
+    connectionString: process.env.DATABASE_URL,
     ssl: {
-        rejectUnauthorized: false // Obrigatório para conexões externas gratuitas
+        rejectUnauthorized: false
     }
 });
 pool.connect((err) => {
@@ -39,9 +40,21 @@ pool.connect((err) => {
 });
 
 // ==========================================
+// CONFIGURAÇÃO DO E-MAIL (NODEMAILER)
+// ==========================================
+const transporter = nodemailer.createTransport({
+    service: 'hotmail', // Serve para Outlook e Hotmail
+    auth: {
+        user: 'meddashapp@hotmail.com',
+        pass: 'appana123' // <--- SUA SENHA AQUI
+    }
+});
+
+// ==========================================
 // 1. ROTAS DE AUTENTICAÇÃO
 // ==========================================
 
+// ROTA: LOGIN
 app.post('/login', async (req, res) => {
     const { email, senha } = req.body;
     try {
@@ -61,19 +74,114 @@ app.post('/login', async (req, res) => {
     }
 });
 
-app.post('/register', async (req, res) => {
-    const { nome, crm, email, senha } = req.body;
+// ROTA: CADASTRO (COM BLOQUEIO DE DUPLICIDADE)
+app.post('/auth/register', async (req, res) => {
+    const { nome, email, senha } = req.body;
+
     try {
-        const hash = await bcrypt.hash(senha, 10);
-        const result = await pool.query(
-            'INSERT INTO medicos (nome, crm, email, senha) VALUES ($1, $2, $3, $4) RETURNING id, nome',
-            [nome, crm, email, hash]
+        // 1. VERIFICAÇÃO DE DUPLICIDADE
+        const userExist = await pool.query("SELECT * FROM medicos WHERE email = $1", [email]);
+        
+        if (userExist.rows.length > 0) {
+            return res.status(400).json({ error: "Este e-mail já está cadastrado!" });
+        }
+
+        // 2. SE NÃO EXISTIR, CADASTRA
+        // Hash da senha (criptografia) deve ser feito aqui idealmente, 
+        // mas vou manter como você enviou para não quebrar a lógica atual se você envia já hashado ou texto puro
+        // Se estiver enviando texto puro, recomendo: const hashedPassword = await bcrypt.hash(senha, 10);
+        
+        const newUser = await pool.query(
+            "INSERT INTO medicos (nome, email, senha) VALUES ($1, $2, $3) RETURNING *",
+            [nome, email, senha]
         );
-        res.status(201).json(result.rows[0]);
+
+        res.json(newUser.rows[0]);
+
     } catch (err) {
-        res.status(500).json({ error: "Erro ao cadastrar médico." });
+        console.error(err.message);
+        res.status(500).send("Erro no servidor");
     }
 });
+
+// ROTA: SOLICITAR LINK DE SENHA
+app.post('/auth/esqueci-senha', async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        const user = await pool.query("SELECT * FROM medicos WHERE email = $1", [email]);
+        if (user.rows.length === 0) {
+            return res.status(404).json({ error: "E-mail não encontrado" });
+        }
+
+        // Gera token
+        const token = crypto.randomBytes(20).toString('hex');
+        const agora = new Date();
+        agora.setHours(agora.getHours() + 1); // Expira em 1 hora
+
+        // Salva no banco
+        await pool.query(
+            "UPDATE medicos SET reset_token = $1, reset_expires = $2 WHERE email = $3",
+            [token, agora, email]
+        );
+
+        // Link para o Frontend
+        const linkRecuperacao = `https://appana.vercel.app/nova-senha.html?token=${token}`;
+
+        // Envia o E-mail
+        await transporter.sendMail({
+            from: '"MedDash App" <meddashapp@hotmail.com>',
+            to: email,
+            subject: 'Recuperação de Senha - MedDash',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Recuperação de Senha</h2>
+                    <p>Você solicitou a redefinição da sua senha.</p>
+                    <p>Clique no botão abaixo para criar uma nova senha:</p>
+                    <a href="${linkRecuperacao}" style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Redefinir Minha Senha</a>
+                    <p>Este link expira em 1 hora.</p>
+                </div>
+            `
+        });
+
+        res.json({ message: "E-mail enviado!" });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Erro ao processar");
+    }
+});
+
+// ROTA: RESETAR SENHA
+app.post('/auth/resetar-senha', async (req, res) => {
+    const { token, novaSenha } = req.body;
+
+    try {
+        const user = await pool.query(
+            "SELECT * FROM medicos WHERE reset_token = $1 AND reset_expires > NOW()",
+            [token]
+        );
+
+        if (user.rows.length === 0) {
+            return res.status(400).json({ error: "Link inválido ou expirado" });
+        }
+
+        // Criptografa a nova senha antes de salvar
+        const hashedPassword = await bcrypt.hash(novaSenha, 10);
+
+        await pool.query(
+            "UPDATE medicos SET senha = $1, reset_token = NULL, reset_expires = NULL WHERE id = $2",
+            [hashedPassword, user.rows[0].id]
+        );
+
+        res.json({ message: "Senha alterada com sucesso!" });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Erro ao resetar senha");
+    }
+});
+
 
 // ==========================================
 // 2. ROTAS DE PACIENTES
@@ -133,7 +241,7 @@ app.get('/perfil-paciente/:id', async (req, res) => {
         const remedios = await pool.query('SELECT * FROM medicamentos WHERE paciente_id = $1 ORDER BY horario ASC', [id]);
         const anotacoes = await pool.query('SELECT * FROM anotacoes_paciente WHERE paciente_id = $1 ORDER BY data_criacao DESC', [id]);
         const historico = await pool.query(`
-            SELECT h.* FROM historico_remedios h 
+            SELECT h.*, m.nome_remedio FROM historico_remedios h 
             JOIN medicamentos m ON h.medicamento_id = m.id 
             WHERE m.paciente_id = $1 ORDER BY h.data_dose DESC`, [id]);
         
@@ -223,8 +331,6 @@ app.post('/registrar-dose', async (req, res) => {
     }
 });
 
-// --- NOVAS ROTAS PARA MEDICAMENTOS (Editar e Excluir) ---
-
 app.put('/medicamentos/:id', async (req, res) => {
     const { id } = req.params;
     const { nome_remedio, horario } = req.body;
@@ -242,7 +348,7 @@ app.put('/medicamentos/:id', async (req, res) => {
 app.delete('/medicamentos/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        // Primeiro apaga o histórico desse remédio para não dar erro de chave estrangeira
+        // Primeiro apaga o histórico
         await pool.query('DELETE FROM historico_remedios WHERE medicamento_id = $1', [id]);
         // Depois apaga o remédio
         await pool.query('DELETE FROM medicamentos WHERE id = $1', [id]);
@@ -252,7 +358,4 @@ app.delete('/medicamentos/:id', async (req, res) => {
     }
 });
 
-
-
-// No final do arquivo
 app.listen(PORT, () => console.log(`🚀 SERVIDOR RODANDO`));

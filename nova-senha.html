@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Senha</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="login-container">
+        <h2>Criar Nova Senha</h2>
+        <input type="password" id="nova-senha" placeholder="Digite a nova senha" required>
+        <button onclick="salvarNovaSenha()">Salvar Nova Senha</button>
+    </div>
+
+    <script>
+        async function salvarNovaSenha() {
+            // Pega o token da URL (?token=xyz...)
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+            const novaSenha = document.getElementById('nova-senha').value;
+            const API_URL = 'https://appana-xlcl.onrender.com';
+
+            if(!token) {
+                alert("Erro: Link inválido ou sem token.");
+                return;
+            }
+
+            if(!novaSenha) {
+                alert("Digite uma senha nova.");
+                return;
+            }
+
+            try {
+                const res = await fetch(API_URL + '/auth/resetar-senha', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ token, novaSenha })
+                });
+
+                const data = await res.json();
+                
+                if(res.ok) {
+                    alert("Senha alterada com sucesso! Faça login.");
+                    window.location.href = 'index.html';
+                } else {
+                    alert("Erro: " + data.error);
+                }
+            } catch (error) {
+                alert("Erro de conexão.");
+            }
+        }
+    </script>
+</body>
+</html>
