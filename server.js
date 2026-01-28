@@ -7,9 +7,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer'); // <--- ADICIONADO
+const nodemailer = require('nodemailer'); // Importação única e correta
 const app = express();
-const nodemailer = require('nodemailer'); // Certifique-se que esta linha está no topo!
+
 // Middlewares
 app.use(express.json());
 app.use(cors());
@@ -40,72 +40,21 @@ pool.connect((err) => {
 });
 
 // ==========================================
-// CONFIGURAÇÃO DO E-MAIL (NODEMAILER)
+// CONFIGURAÇÃO DO E-MAIL (GMAIL - BLINDADA PORTA 465)
 // ==========================================
-// ==========================================
-// CONFIGURAÇÃO DO E-MAIL (MODO OFFICE 365)
-// ==========================================
-// ==========================================
-// CONFIGURAÇÃO DO E-MAIL (MUDANÇA PARA GMAIL)
-// ==========================================
-
-
-// ... resto dos imports ...
-
-// CONFIGURAÇÃO DO GMAIL (INFALÍVEL)
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com', // Servidor do Gmail
+    port: 465,              // Porta Segura SSL
+    secure: true,           // Obrigatório ser true na porta 465
     auth: {
-        user: 'meddashapp@gmail.com', // Seu e-mail
-        pass: 'srqu mvsr urrw sxin'       // A SENHA DE APP DE 16 LETRAS (sem espaços funciona também)
+        user: 'meddashapp@gmail.com', 
+        pass: 'srqu mvsr urrw sxin'   // Sua Senha de App
+    },
+    tls: {
+        rejectUnauthorized: false // Evita erros de certificado no Render
     }
 });
-// ==========================================
-// ROTAS DE SENHA (CORRIGIDAS)
-// ==========================================
 
-// ROTA 1: SOLICITAR O LINK
-app.post('/auth/esqueci-senha', async (req, res) => {
-    const { email } = req.body;
-
-    try {
-        const user = await pool.query("SELECT * FROM medicos WHERE email = $1", [email]);
-        if (user.rows.length === 0) {
-            return res.status(404).json({ error: "E-mail não encontrado" });
-        }
-
-        const token = crypto.randomBytes(20).toString('hex');
-        const agora = new Date();
-        agora.setHours(agora.getHours() + 1);
-
-        await pool.query(
-            "UPDATE medicos SET reset_token = $1, reset_expires = $2 WHERE email = $3",
-            [token, agora, email]
-        );
-
-        const linkRecuperacao = `https://appana.vercel.app/nova-senha.html?token=${token}`;
-
-        await transporter.sendMail({
-            from: '"MedDash App" <SEU_EMAIL_AQUI@gmail.com>', // <--- Atualize aqui também
-            to: email,
-            subject: 'Recuperação de Senha - MedDash',
-            html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px;">
-                    <h2>Recuperação de Senha</h2>
-                    <p>Clique no botão abaixo para criar uma nova senha:</p>
-                    <a href="${linkRecuperacao}" style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Redefinir Senha</a>
-                </div>
-            `
-        });
-
-        res.json({ message: "E-mail enviado com sucesso!" });
-
-    } catch (err) {
-        console.error("Erro no envio de e-mail:", err);
-        // AQUI ESTAVA O ERRO DE SYNTAX: Agora enviamos JSON corretamente
-        res.status(500).json({ error: "Erro ao enviar e-mail. Tente novamente mais tarde." });
-    }
-});
 // ==========================================
 // 1. ROTAS DE AUTENTICAÇÃO
 // ==========================================
@@ -130,7 +79,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// ROTA: CADASTRO (COM BLOQUEIO DE DUPLICIDADE)
+// ROTA: CADASTRO
 app.post('/auth/register', async (req, res) => {
     const { nome, email, senha } = req.body;
 
@@ -143,10 +92,7 @@ app.post('/auth/register', async (req, res) => {
         }
 
         // 2. SE NÃO EXISTIR, CADASTRA
-        // Hash da senha (criptografia) deve ser feito aqui idealmente, 
-        // mas vou manter como você enviou para não quebrar a lógica atual se você envia já hashado ou texto puro
-        // Se estiver enviando texto puro, recomendo: const hashedPassword = await bcrypt.hash(senha, 10);
-        
+        // Idealmente criptografar a senha aqui: const hashedPassword = await bcrypt.hash(senha, 10);
         const newUser = await pool.query(
             "INSERT INTO medicos (nome, email, senha) VALUES ($1, $2, $3) RETURNING *",
             [nome, email, senha]
@@ -170,41 +116,36 @@ app.post('/auth/esqueci-senha', async (req, res) => {
             return res.status(404).json({ error: "E-mail não encontrado" });
         }
 
-        // Gera token
         const token = crypto.randomBytes(20).toString('hex');
         const agora = new Date();
-        agora.setHours(agora.getHours() + 1); // Expira em 1 hora
+        agora.setHours(agora.getHours() + 1);
 
-        // Salva no banco
         await pool.query(
             "UPDATE medicos SET reset_token = $1, reset_expires = $2 WHERE email = $3",
             [token, agora, email]
         );
 
-        // Link para o Frontend
         const linkRecuperacao = `https://appana.vercel.app/nova-senha.html?token=${token}`;
 
-        // Envia o E-mail
         await transporter.sendMail({
-            from: '"MedDash App" <meddashapp@hotmail.com>',
+            from: '"MedDash App" <meddashapp@gmail.com>',
             to: email,
             subject: 'Recuperação de Senha - MedDash',
             html: `
                 <div style="font-family: Arial, sans-serif; padding: 20px;">
                     <h2>Recuperação de Senha</h2>
-                    <p>Você solicitou a redefinição da sua senha.</p>
                     <p>Clique no botão abaixo para criar uma nova senha:</p>
-                    <a href="${linkRecuperacao}" style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Redefinir Minha Senha</a>
+                    <a href="${linkRecuperacao}" style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Redefinir Senha</a>
                     <p>Este link expira em 1 hora.</p>
                 </div>
             `
         });
 
-        res.json({ message: "E-mail enviado!" });
+        res.json({ message: "E-mail enviado com sucesso!" });
 
     } catch (err) {
-        console.error(err);
-        res.status(500).send("Erro ao processar");
+        console.error("Erro no envio de e-mail:", err);
+        res.status(500).json({ error: "Erro ao enviar e-mail. Tente novamente mais tarde." });
     }
 });
 
@@ -222,7 +163,6 @@ app.post('/auth/resetar-senha', async (req, res) => {
             return res.status(400).json({ error: "Link inválido ou expirado" });
         }
 
-        // Criptografa a nova senha antes de salvar
         const hashedPassword = await bcrypt.hash(novaSenha, 10);
 
         await pool.query(
@@ -237,7 +177,6 @@ app.post('/auth/resetar-senha', async (req, res) => {
         res.status(500).send("Erro ao resetar senha");
     }
 });
-
 
 // ==========================================
 // 2. ROTAS DE PACIENTES
