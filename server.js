@@ -42,14 +42,22 @@ pool.connect((err) => {
 // ==========================================
 // CONFIGURAÇÃO DO E-MAIL (NODEMAILER)
 // ==========================================
+// ==========================================
+// CONFIGURAÇÃO DO E-MAIL (CORRIGIDO)
+// ==========================================
 const transporter = nodemailer.createTransport({
-    service: 'hotmail', // Serve para Outlook e Hotmail
+    host: "smtp-mail.outlook.com", // Servidor oficial da Microsoft
+    port: 587,                     // Porta que o Render permite
+    secure: false,                 // false para porta 587 (usa STARTTLS)
     auth: {
         user: 'meddashapp@hotmail.com',
-        pass: 'appana123' // <--- SUA SENHA AQUI
+        pass: 'appana123'          // <--- IMPORTANTE: COLOQUE A SENHA REAL AQUI!
+    },
+    tls: {
+        ciphers: 'SSLv3',          // Ajuda na compatibilidade
+        rejectUnauthorized: false  // Evita erros de certificado na nuvem
     }
 });
-
 // ==========================================
 // 1. ROTAS DE AUTENTICAÇÃO
 // ==========================================
