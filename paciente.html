@@ -63,14 +63,27 @@
 
                 <div class="coluna-direita">
                     <div class="card-grafico">
-                       <div class="filtros-grafico-header" style="flex-direction: column; align-items: flex-start; gap: 10px;">
-    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+               <div class="filtros-grafico-header filtros-header-wrapper">
+    
+    <div class="titulo-select-row">
         <h3>Adesão ao Tratamento</h3>
         
-        <select id="filtro-remedio-grafico" onchange="atualizarGrafico()" class="select-filtro">
+        <select 
+            id="filtro-remedio-grafico" 
+            onchange="atualizarGrafico()" 
+            class="select-filtro"
+            aria-label="Filtrar gráfico por remédio"
+        >
             <option value="todos">Todos os Remédios</option>
         </select>
-        </div>
+    </div>
+
+    <div class="botoes-filtro">
+        <button class="btn-filtro active" onclick="atualizarPeriodo(7, this)" aria-label="Filtrar por 7 dias">7 Dias</button>
+        <button class="btn-filtro" onclick="atualizarPeriodo(30, this)" aria-label="Filtrar por 30 dias">30 Dias</button>
+        <button class="btn-filtro" onclick="atualizarPeriodo(90, this)" aria-label="Filtrar por 90 dias">90 Dias</button>
+    </div>
+</div>
 
     <div class="botoes-filtro">
         <button class="btn-filtro active" onclick="atualizarPeriodo(7, this)">7 Dias</button>
