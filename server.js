@@ -42,16 +42,20 @@ pool.connect((err) => {
 // ==========================================
 // CONFIGURAÇÃO DO E-MAIL (GMAIL - BLINDADA PORTA 465)
 // ==========================================
+// ==========================================
+// CONFIGURAÇÃO GMAIL (TENTATIVA PORTA 587)
+// ==========================================
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com', // Servidor do Gmail
-    port: 465,              // Porta Segura SSL
-    secure: true,           // Obrigatório ser true na porta 465
+    host: 'smtp.gmail.com',
+    port: 587,              // Porta alternativa (STARTTLS)
+    secure: false,          // false é OBRIGATÓRIO para porta 587
+    requireTLS: true,       // Força segurança após conectar
     auth: {
         user: 'meddashapp@gmail.com', 
-        pass: 'srqu mvsr urrw sxin'   // Sua Senha de App
+        pass: 'srqu mvsr urrw sxin'   // Sua senha de app (mantenha a mesma)
     },
     tls: {
-        rejectUnauthorized: false // Evita erros de certificado no Render
+        rejectUnauthorized: false
     }
 });
 
