@@ -9,7 +9,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer'); // <--- ADICIONADO
 const app = express();
-
+const nodemailer = require('nodemailer'); // Certifique-se que esta linha está no topo!
 // Middlewares
 app.use(express.json());
 app.use(cors());
@@ -48,14 +48,18 @@ pool.connect((err) => {
 // ==========================================
 // CONFIGURAÇÃO DO E-MAIL (MUDANÇA PARA GMAIL)
 // ==========================================
+
+
+// ... resto dos imports ...
+
+// CONFIGURAÇÃO DO GMAIL (INFALÍVEL)
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'meddashapp@gmail.com', // <--- Coloque seu Gmail
-        pass: 'srqu mvsr urrw sxin'  // <--- Aquela senha de 16 letras (sem espaços)
+        user: 'meddashapp@gmail.com', // Seu e-mail
+        pass: 'srqu mvsr urrw sxin'       // A SENHA DE APP DE 16 LETRAS (sem espaços funciona também)
     }
 });
-
 // ==========================================
 // ROTAS DE SENHA (CORRIGIDAS)
 // ==========================================
