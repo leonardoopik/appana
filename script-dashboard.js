@@ -1,138 +1,77 @@
 const API_URL = 'https://appana-xlcl.onrender.com';
+
+// 1. VERIFICAÇÃO DE SEGURANÇA (Se não tiver logado, chuta para fora)
 const medicoId = localStorage.getItem('medicoId');
 const medicoNome = localStorage.getItem('medicoNome');
 
-// Verifica se está logado
 if (!medicoId) {
     window.location.href = 'index.html';
+} else {
+    // Se tiver elemento para mostrar o nome do médico, mostra
+    const nomeDisplay = document.getElementById('nome-medico-display');
+    if (nomeDisplay) nomeDisplay.innerText = medicoNome;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('welcome-msg').innerText = `Olá, ${medicoNome || 'Doutor(a)'}`;
-    carregarPacientes();
-});
-
-// --- FUNÇÕES DO MODAL ---
-function abrirModal() {
-    document.getElementById('modal-novo-paciente').style.display = 'flex';
-}
-
-function fecharModal() {
-    document.getElementById('modal-novo-paciente').style.display = 'none';
-    // Limpa os campos
-    document.getElementById('paciente-nome').value = '';
-    document.getElementById('paciente-whats').value = '';
-    document.getElementById('paciente-nasc').value = '';
-    document.getElementById('paciente-gestor').value = ''; // Limpa o gestor também
-}
-
-// --- FUNÇÕES DE API ---
+// 2. CARREGAR A LISTA DE PACIENTES
 async function carregarPacientes() {
-    const container = document.getElementById('lista-pacientes');
-    container.innerHTML = '<p>Carregando...</p>';
-
     try {
         const response = await fetch(`${API_URL}/pacientes-por-medico/${medicoId}`);
         const pacientes = await response.json();
 
-       if (pacientes.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-user-injured empty-icon"></i>
-                    <p style="color: #64748b;">Nenhum paciente cadastrado ainda.</p>
-                </div>
-            `;
+        const container = document.getElementById('lista-pacientes'); // <--- Verifique se no HTML tem uma div com esse ID
+        
+        // Se não achar o lugar de colocar os cards, para o código para não dar erro
+        if (!container) return; 
+
+        container.innerHTML = ''; // Limpa a lista antes de encher
+
+        if (pacientes.length === 0) {
+            container.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color: #666;">Nenhum paciente encontrado.</p>';
             return;
         }
 
-        // Adicionei um atributo 'data-nome' para facilitar a pesquisa
-        container.innerHTML = pacientes.map(p => `
-            <div class="card-info" data-nome="${p.nome.toLowerCase()}" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <h3 style="margin-bottom: 5px;">${p.nome}</h3>
-                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px;">
-                        <i class="fab fa-whatsapp"></i> ${p.whatsapp}
-                    </p>
-                    ${p.gestor ? `<p style="color: #64748b; font-size: 0.8rem;">Gestor: <strong>${p.gestor}</strong></p>` : ''}
-                </div>
-                <button onclick="verPaciente(${p.id})" class="btn-primary" style="width: 100%; margin-top: 15px;">
-                    Acessar Prontuário <i class="fas fa-arrow-right"></i>
-                </button>
-            </div>
-        `).join('');
+        pacientes.forEach(paciente => {
+            const card = document.createElement('div');
+            card.className = 'card-paciente'; // Certifique-se que essa classe existe no seu CSS para ficar bonito
+            
+            // Estilo básico do card via JS caso não tenha CSS ainda
+            card.style.background = "white";
+            card.style.padding = "20px";
+            card.style.borderRadius = "10px";
+            card.style.boxShadow = "0 2px 5px rgba(0,0,0,0.1)";
+            card.style.cursor = "pointer";
+            card.style.transition = "transform 0.2s";
 
-    } catch (error) {
-        container.innerHTML = '<p style="color: red;">Erro ao carregar pacientes.</p>';
-        console.error(error);
-    }
-}
+            // Cria o HTML do Card
+            card.innerHTML = `
+                <h3 style="margin-bottom: 5px; color: #333;">${paciente.nome}</h3>
+                <p style="color: #666; font-size: 0.9em;">Gestor: ${paciente.gestor || '---'}</p>
+            `;
 
-async function salvarPaciente(event) {
-    event.preventDefault();
-    
-    // Pegando valores
-    const nome = document.getElementById('paciente-nome').value;
-    const whatsapp = document.getElementById('paciente-whats').value;
-    const data_nascimento = document.getElementById('paciente-nasc').value;
-    const gestor = document.getElementById('paciente-gestor').value;
+            // EVENTO DE CLIQUE (AQUI QUE FAZ ENTRAR NO PERFIL)
+            card.onclick = function() {
+                window.location.href = `perfil-paciente.html?id=${paciente.id}`;
+            };
+            
+            // Efeito visual ao passar o mouse
+            card.onmouseover = () => card.style.transform = "translateY(-3px)";
+            card.onmouseout = () => card.style.transform = "translateY(0)";
 
-    // --- VALIDAÇÃO DO GESTOR ---
-    if (gestor.length !== 5) {
-        alert("O código do Gestor precisa ter exatamente 5 números!");
-        return;
-    }
-
-    const dados = {
-        medicoId: medicoId,
-        nome: nome,
-        whatsapp: whatsapp,
-        data_nascimento: data_nascimento,
-        gestor: gestor // Enviando o novo campo
-    };
-
-    try {
-        const response = await fetch(`${API_URL}/pacientes`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dados)
+            container.appendChild(card);
         });
 
-        if (response.ok) {
-            alert("Paciente cadastrado com sucesso!");
-            fecharModal();
-            carregarPacientes();
-        } else {
-            alert("Erro ao cadastrar.");
-        }
     } catch (error) {
-        alert("Erro de conexão.");
-        console.error(error);
+        console.error("Erro ao buscar pacientes:", error);
+        alert("Erro ao carregar a lista de pacientes.");
     }
 }
 
-function verPaciente(id) {
-    localStorage.setItem('pacienteSelecionadoId', id);
-    window.location.href = 'paciente.html';
-}
-
-function logout() {
+// 3. FUNÇÃO DE SAIR (LOGOUT)
+function sair() {
     localStorage.clear();
     window.location.href = 'index.html';
 }
 
-// --- FUNÇÃO DE PESQUISA (NOVA) ---
-function filtrarPacientes() {
-    const termo = document.getElementById('pesquisaPaciente').value.toLowerCase();
-    const cards = document.querySelectorAll('.card-info');
-
-    cards.forEach(card => {
-        // Pega o nome que guardamos no atributo data-nome ou procura no H3
-        const nomePaciente = card.querySelector('h3').innerText.toLowerCase();
-
-        if (nomePaciente.includes(termo)) {
-            card.style.display = "flex"; // Mostra
-        } else {
-            card.style.display = "none"; // Esconde
-        }
-    });
-}
+// 4. INICIALIZAÇÃO
+// Quando a página termina de carregar, roda a função
+window.onload = carregarPacientes;
