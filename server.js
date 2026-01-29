@@ -15,7 +15,7 @@ app.use(express.json());
 app.use(cors());
 
 // Configura o Resend com a chave que você copiou
-const resend = new Resend('re_DKtGpYAa_EQeG5kKtCCJvsJrvASpxcrwd'); // <--- COLE SUA CHAVE 're_...' AQUI!!!
+const resend = new Resend(process.env.RESEND_API_KEY);// <--- COLE SUA CHAVE 're_...' AQUI!!!
 
 // Criar pasta uploads
 if (!fs.existsSync('./uploads')) {
@@ -94,7 +94,7 @@ app.post('/auth/esqueci-senha', async (req, res) => {
             [token, agora, email]
         );
 
-        const linkRecuperacao = `https://appana.vercel.app/nova-senha.html?token=${token}`;
+        const linkRecuperacao = `https://www.meddash.com.br/nova-senha.html?token=${token}`;
 
         // ENVIO PELO RESEND (Não bloqueia nunca)
         await resend.emails.send({
