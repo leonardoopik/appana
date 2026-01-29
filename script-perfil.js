@@ -155,15 +155,92 @@ function addInputHora() {
 }
 
 // CORREÇÃO AQUI: Salvar Novo Remédio
+// ==========================================
+// SUBSTITUA A FUNÇÃO salvarNovoRemedio POR ESTA:
+// ==========================================
+
 async function salvarNovoRemedio() {
-    // 1. Pega o Nome e a Dose
+    // 1. Pega os valores dos campos
     const nomeInput = document.getElementById('nome-remedio').value;
     const doseInput = document.getElementById('obs-remedio').value;
+    
+    // Tenta pegar a duração (se o campo não existir no HTML, ignora para não dar erro)
+    const duracaoElement = document.getElementById('duracao-remedio');
+    const duracaoInput = duracaoElement ? duracaoElement.value : ''; 
 
     if (!nomeInput) {
         alert("Digite o nome do remédio.");
         return;
     }
+
+    // 2. MONTAGEM DO NOME COMPLETO PARA O BANCO
+    // Vamos juntar tudo numa string só para ficar salvo assim:
+    // "Amoxicilina (1 cp 8/8h - Duração: 7 dias)"
+    
+    let infoExtra = [];
+    if (doseInput) infoExtra.push(doseInput);
+    if (duracaoInput) infoExtra.push(`Duração: ${duracaoInput}`);
+
+    let nomeFinal = nomeInput;
+    if (infoExtra.length > 0) {
+        nomeFinal += ` (${infoExtra.join(' - ')})`;
+    }
+
+    // 3. Pega os horários
+    const inputsHoras = document.querySelectorAll('.input-hora');
+    let listaHorarios = [];
+    
+    inputsHoras.forEach(input => {
+        if (input.value) {
+            listaHorarios.push(input.value);
+        }
+    });
+
+    if (listaHorarios.length === 0) {
+        alert("Adicione pelo menos um horário.");
+        return;
+    }
+
+    // 4. Prepara o envio
+    const fotoInput = document.getElementById('foto-remedio');
+    const formData = new FormData();
+    formData.append('pacienteId', pacienteId);
+    formData.append('nome_remedio', nomeFinal); 
+    formData.append('horarios', JSON.stringify(listaHorarios));
+    
+    if (fotoInput.files[0]) {
+        formData.append('foto', fotoInput.files[0]);
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/medicamentos`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            alert("Medicamento salvo!");
+            carregarPerfil(); 
+            
+            // Limpa os campos
+            document.getElementById('nome-remedio').value = '';
+            document.getElementById('obs-remedio').value = '';
+            
+            // Limpa o campo duração se ele existir
+            if(duracaoElement) duracaoElement.value = ''; 
+
+            document.getElementById('container-horarios').innerHTML = `
+                <label>Horários</label>
+                <div class="horario-row"><input type="time" class="input-hora"></div>
+            `;
+        } else {
+            alert("Erro ao salvar medicamento.");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Erro de conexão.");
+    }
+}
 
     // CONCATENAÇÃO: Junta Nome + Dose para salvar no banco (já que não temos coluna dose ainda)
     const nomeFinal = doseInput ? `${nomeInput} (${doseInput})` : nomeInput;
@@ -217,7 +294,7 @@ async function salvarNovoRemedio() {
         console.error(error);
         alert("Erro de conexão.");
     }
-}
+
 
 async function salvarNovaNota() {
     const texto = document.getElementById('nova-nota-texto').value;
