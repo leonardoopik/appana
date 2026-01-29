@@ -98,7 +98,7 @@ app.post('/auth/esqueci-senha', async (req, res) => {
 
         // ENVIO PELO RESEND (Não bloqueia nunca)
         await resend.emails.send({
-           from: 'Suporte MedDash <suporte@send.meddash.com.br>', // E-mail de teste do Resend (obrigatório usar esse se não tiver domínio)
+           from: 'Suporte MedDash <suporte@meddash.com.br>', // E-mail de teste do Resend (obrigatório usar esse se não tiver domínio)
             to: email, // ATENÇÃO: Só funciona se este email for o mesmo da sua conta Resend (no plano grátis sem domínio)
             subject: 'Recuperação de Senha - MedDash',
             html: `
