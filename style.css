@@ -652,6 +652,136 @@ body.auth-page {
     text-decoration: none;
 }
 
+
+
+
+/* --- ESTILO DO FORMULÁRIO DE REMÉDIOS --- */
+.novo-remedio-form {
+    background: #f8f9fa; /* Fundo cinza bem claro */
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    margin-top: 20px;
+}
+
+.novo-remedio-form h4 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #3b82f6;
+    display: inline-block;
+    padding-bottom: 5px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* Nome ocupa 2x mais espaço que a Duração */
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-group-small label {
+    display: block;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+.form-group-small input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95em;
+    transition: 0.3s;
+}
+
+.form-group-small input:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.horarios-container {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px dashed #ccc;
+    margin: 15px 0;
+}
+
+.horario-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.input-hora {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background: #f0f4ff;
+    color: #333;
+    font-weight: bold;
+}
+
+.btn-add-hora {
+    background: transparent;
+    color: #3b82f6;
+    border: 1px dashed #3b82f6;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8em;
+}
+
+.btn-add-hora:hover {
+    background: #edf5ff;
+}
+
+.btn-salvar-remedio {
+    width: 100%;
+    background: #10b981; /* Verde bonito */
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+    margin-top: 10px;
+}
+
+.btn-salvar-remedio:hover {
+    background: #059669;
+    transform: translateY(-2px);
+}
+
+
+
+
+/* --- NOVAS CLASSES PARA CORRIGIR OS ERROS --- */
+
+/* Substitui o estilo inline do título dos horários */
+.label-destaque {
+    font-size: 0.9em;
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: block;
+    color: #444;
+}
+
+/* Substitui o estilo inline do input de arquivo */
+.input-foto {
+    background: white;
+    padding: 5px;
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
 .btn-mini:hover { opacity: 1; transform: scale(1.1); }
 .btn-mini.edit { color: var(--warning); }
 .btn-mini.del { color: var(--danger); }

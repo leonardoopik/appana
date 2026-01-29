@@ -1,6 +1,6 @@
 const API_URL = 'https://appana-xlcl.onrender.com';
 
-// Pega o ID do paciente da URL (ex: perfil-paciente.html?id=123)
+// Pega o ID do paciente da URL
 const urlParams = new URLSearchParams(window.location.search);
 const pacienteId = urlParams.get('id');
 
@@ -25,7 +25,6 @@ const PROTOCOLOS_MEDICOS = {
     "LEVOTIROXINA 100mcg": { nome: "Levotiroxina Sódica 100mcg", dose: "1 cp (Jejum absoluto - min 30min antes café)", horarios: ["07:00"] }
 };
 
-// Carrega as opções na lista invisível ao abrir a página
 function carregarSugestoes() {
     const datalist = document.getElementById('lista-sugestoes');
     if (!datalist) return;
@@ -37,34 +36,33 @@ function carregarSugestoes() {
     });
 }
 
-// Preenche os campos quando o médico seleciona
 function aplicarSugestao(input) {
     const dados = PROTOCOLOS_MEDICOS[input.value];
     if (dados) {
         document.getElementById('nome-remedio').value = dados.nome;
         document.getElementById('obs-remedio').value = dados.dose;
         
-        // Limpa horários antigos
+        // Limpa horários antigos e adiciona novos
         const container = document.getElementById('container-horarios');
-        container.innerHTML = '<label>Horários</label>';
+        container.innerHTML = ''; 
         
-        // Adiciona os novos horários
         dados.horarios.forEach(hora => {
-            const div = document.createElement('div');
-            div.className = 'horario-row';
-            div.innerHTML = `<input type="time" class="input-hora" value="${hora}">`;
-            container.appendChild(div);
+            const inputHora = document.createElement('input');
+            inputHora.type = 'time';
+            inputHora.className = 'input-hora';
+            inputHora.value = hora;
+            inputHora.style.marginRight = '5px';
+            container.appendChild(inputHora);
         });
     }
 }
 
 // ==========================================
-// 2. FUNÇÕES PRINCIPAIS DO PERFIL
+// 2. FUNÇÕES PRINCIPAIS (Carregar, Listar)
 // ==========================================
-
 async function carregarPerfil() {
     if (!pacienteId) {
-        alert("Paciente não especificado.");
+        alert("Paciente não encontrado.");
         window.location.href = 'dashboard.html';
         return;
     }
@@ -74,29 +72,24 @@ async function carregarPerfil() {
         const data = await response.json();
 
         if (response.ok) {
-            // Preenche Card Principal
             document.getElementById('detalhe-nome').innerText = data.info.nome;
             document.getElementById('detalhe-whats').innerText = data.info.whatsapp;
             document.getElementById('detalhe-gestor').innerText = data.info.gestor || "---";
-
-            // Formata Data de Nascimento
+            
             const dataNasc = new Date(data.info.data_nascimento);
             document.getElementById('detalhe-nasc').innerText = dataNasc.toLocaleDateString('pt-BR');
 
-            // Preenche Listas
             listarMedicamentos(data.medicamentos);
             listarAnotacoes(data.anotacoes);
-            
-        } else {
-            alert("Erro ao carregar paciente.");
         }
     } catch (error) {
-        console.error("Erro:", error);
+        console.error("Erro ao carregar perfil:", error);
     }
 }
 
 function listarMedicamentos(lista) {
     const container = document.getElementById('lista-controle-remedios');
+    if (!container) return;
     container.innerHTML = '';
 
     if (lista.length === 0) {
@@ -106,14 +99,26 @@ function listarMedicamentos(lista) {
 
     lista.forEach(med => {
         const card = document.createElement('div');
-        card.className = 'remedio-item';
-        // Mostra o nome e o horário. Se tiver foto, mostra ícone.
+        card.className = 'remedio-item'; // Certifique-se de ter CSS para isso
+        card.style.background = "white";
+        card.style.padding = "10px";
+        card.style.marginBottom = "10px";
+        card.style.borderRadius = "8px";
+        card.style.borderLeft = "4px solid #3b82f6";
+        card.style.display = "flex";
+        card.style.justifyContent = "space-between";
+        card.style.alignItems = "center";
+
         card.innerHTML = `
             <div class="remedio-info">
-                <strong>${med.nome_remedio}</strong>
-                <span class="remedio-hora"><i class="far fa-clock"></i> ${med.horario}</span>
+                <strong style="display:block; font-size:1.1em;">${med.nome_remedio}</strong>
+                <span class="remedio-hora" style="color:#666; font-size:0.9em;">
+                    <i class="far fa-clock"></i> ${med.horario}
+                </span>
             </div>
-            <button onclick="excluirRemedio(${med.id})" class="btn-icon-delete"><i class="fas fa-trash"></i></button>
+            <button onclick="excluirRemedio(${med.id})" style="background:none; border:none; color:red; cursor:pointer;">
+                <i class="fas fa-trash"></i>
+            </button>
         `;
         container.appendChild(card);
     });
@@ -121,6 +126,7 @@ function listarMedicamentos(lista) {
 
 function listarAnotacoes(lista) {
     const container = document.getElementById('historico-notas');
+    if (!container) return;
     container.innerHTML = '';
 
     if (lista.length === 0) {
@@ -130,12 +136,13 @@ function listarAnotacoes(lista) {
 
     lista.forEach(nota => {
         const div = document.createElement('div');
-        div.className = 'nota-item';
+        div.style.borderBottom = "1px solid #eee";
+        div.style.padding = "8px 0";
         const data = new Date(nota.data_criacao).toLocaleDateString('pt-BR');
         div.innerHTML = `
-            <p>${nota.texto}</p>
-            <small>${data}</small>
-            <button onclick="excluirNota(${nota.id})" class="btn-small-delete">x</button>
+            <p style="margin:0;">${nota.texto}</p>
+            <small style="color:#999;">${data}</small>
+            <button onclick="excluirNota(${nota.id})" style="float:right; border:none; background:none; color:red; cursor:pointer;">x</button>
         `;
         container.appendChild(div);
     });
@@ -145,38 +152,30 @@ function listarAnotacoes(lista) {
 // 3. FUNÇÕES DE ADICIONAR (SALVAR)
 // ==========================================
 
-// Adiciona mais um campo de horário na tela
 function addInputHora() {
     const container = document.getElementById('container-horarios');
-    const div = document.createElement('div');
-    div.className = 'horario-row';
-    div.innerHTML = `<input type="time" class="input-hora">`;
-    container.appendChild(div);
+    const input = document.createElement('input');
+    input.type = 'time';
+    input.className = 'input-hora';
+    input.setAttribute('aria-label', 'Horário da dose'); // <--- ADICIONADO ISSO
+    input.style.marginRight = '5px';
+    input.style.marginTop = '5px';
+    container.appendChild(input);
 }
 
-// CORREÇÃO AQUI: Salvar Novo Remédio
-// ==========================================
-// SUBSTITUA A FUNÇÃO salvarNovoRemedio POR ESTA:
-// ==========================================
-
 async function salvarNovoRemedio() {
-    // 1. Pega os valores dos campos
+    // 1. Captura dos dados
     const nomeInput = document.getElementById('nome-remedio').value;
     const doseInput = document.getElementById('obs-remedio').value;
-    
-    // Tenta pegar a duração (se o campo não existir no HTML, ignora para não dar erro)
     const duracaoElement = document.getElementById('duracao-remedio');
-    const duracaoInput = duracaoElement ? duracaoElement.value : ''; 
+    const duracaoInput = duracaoElement ? duracaoElement.value : '';
 
     if (!nomeInput) {
         alert("Digite o nome do remédio.");
         return;
     }
 
-    // 2. MONTAGEM DO NOME COMPLETO PARA O BANCO
-    // Vamos juntar tudo numa string só para ficar salvo assim:
-    // "Amoxicilina (1 cp 8/8h - Duração: 7 dias)"
-    
+    // 2. Montagem do Nome Completo (Nome + Dose + Duração)
     let infoExtra = [];
     if (doseInput) infoExtra.push(doseInput);
     if (duracaoInput) infoExtra.push(`Duração: ${duracaoInput}`);
@@ -186,14 +185,11 @@ async function salvarNovoRemedio() {
         nomeFinal += ` (${infoExtra.join(' - ')})`;
     }
 
-    // 3. Pega os horários
+    // 3. Captura dos Horários
     const inputsHoras = document.querySelectorAll('.input-hora');
     let listaHorarios = [];
-    
     inputsHoras.forEach(input => {
-        if (input.value) {
-            listaHorarios.push(input.value);
-        }
+        if (input.value) listaHorarios.push(input.value);
     });
 
     if (listaHorarios.length === 0) {
@@ -201,14 +197,14 @@ async function salvarNovoRemedio() {
         return;
     }
 
-    // 4. Prepara o envio
+    // 4. Envio para o Servidor
     const fotoInput = document.getElementById('foto-remedio');
     const formData = new FormData();
     formData.append('pacienteId', pacienteId);
-    formData.append('nome_remedio', nomeFinal); 
+    formData.append('nome_remedio', nomeFinal);
     formData.append('horarios', JSON.stringify(listaHorarios));
     
-    if (fotoInput.files[0]) {
+    if (fotoInput && fotoInput.files[0]) {
         formData.append('foto', fotoInput.files[0]);
     }
 
@@ -219,82 +215,21 @@ async function salvarNovoRemedio() {
         });
 
         if (response.ok) {
-            alert("Medicamento salvo!");
-            carregarPerfil(); 
+            alert("Medicamento salvo com sucesso!");
+            carregarPerfil(); // Recarrega a lista
             
-            // Limpa os campos
+            // Limpa formulário
             document.getElementById('nome-remedio').value = '';
             document.getElementById('obs-remedio').value = '';
-            
-            // Limpa o campo duração se ele existir
-            if(duracaoElement) duracaoElement.value = ''; 
-
-            document.getElementById('container-horarios').innerHTML = `
-                <label>Horários</label>
-                <div class="horario-row"><input type="time" class="input-hora"></div>
-            `;
+            if(duracaoElement) duracaoElement.value = '';
+            document.getElementById('container-horarios').innerHTML = '<input type="time" class="input-hora">';
         } else {
-            alert("Erro ao salvar medicamento.");
+            alert("Erro ao salvar.");
         }
     } catch (error) {
-        console.error(error);
-        alert("Erro de conexão.");
+        console.error("Erro na conexão:", error);
     }
 }
-
-    // CONCATENAÇÃO: Junta Nome + Dose para salvar no banco (já que não temos coluna dose ainda)
-    const nomeFinal = doseInput ? `${nomeInput} (${doseInput})` : nomeInput;
-
-    // 2. Pega TODOS os horários preenchidos
-    const inputsHoras = document.querySelectorAll('.input-hora');
-    let listaHorarios = [];
-    
-    inputsHoras.forEach(input => {
-        if (input.value) {
-            listaHorarios.push(input.value);
-        }
-    });
-
-    if (listaHorarios.length === 0) {
-        alert("Adicione pelo menos um horário.");
-        return;
-    }
-
-    const fotoInput = document.getElementById('foto-remedio');
-    const formData = new FormData();
-    formData.append('pacienteId', pacienteId);
-    formData.append('nome_remedio', nomeFinal); // Envia o nome completo
-    formData.append('horarios', JSON.stringify(listaHorarios)); // Envia lista de horários
-    
-    if (fotoInput.files[0]) {
-        formData.append('foto', fotoInput.files[0]);
-    }
-
-    try {
-        const response = await fetch(`${API_URL}/medicamentos`, {
-            method: 'POST',
-            body: formData
-        });
-
-        if (response.ok) {
-            alert("Medicamento salvo!");
-            carregarPerfil(); // Recarrega a tela
-            
-            // Limpa os campos
-            document.getElementById('nome-remedio').value = '';
-            document.getElementById('obs-remedio').value = '';
-            document.getElementById('container-horarios').innerHTML = `
-                <label>Horários</label>
-                <div class="horario-row"><input type="time" class="input-hora"></div>
-            `;
-        } else {
-            alert("Erro ao salvar medicamento.");
-        }
-    } catch (error) {
-        console.error(error);
-        alert("Erro de conexão.");
-    }
-
 
 async function salvarNovaNota() {
     const texto = document.getElementById('nova-nota-texto').value;
@@ -319,43 +254,34 @@ async function salvarNovaNota() {
 // ==========================================
 // 4. FUNÇÕES DE EXCLUIR
 // ==========================================
-
 async function excluirRemedio(id) {
-    if (!confirm("Tem certeza que deseja excluir este medicamento?")) return;
+    if (!confirm("Excluir este medicamento?")) return;
     try {
         await fetch(`${API_URL}/medicamentos/${id}`, { method: 'DELETE' });
         carregarPerfil();
-    } catch (error) {
-        console.error(error);
-    }
+    } catch (error) { console.error(error); }
 }
 
 async function excluirNota(id) {
-    if (!confirm("Apagar anotação?")) return;
+    if (!confirm("Apagar nota?")) return;
     try {
         await fetch(`${API_URL}/anotacoes/${id}`, { method: 'DELETE' });
         carregarPerfil();
-    } catch (error) {
-        console.error(error);
-    }
+    } catch (error) { console.error(error); }
 }
 
 async function excluirPaciente() {
-    if (!confirm("ATENÇÃO: Isso apagará todo o histórico e medicamentos deste paciente. Continuar?")) return;
+    if (!confirm("Isso apagará TUDO deste paciente. Continuar?")) return;
     try {
         await fetch(`${API_URL}/pacientes/${pacienteId}`, { method: 'DELETE' });
-        alert("Paciente removido.");
         window.location.href = 'dashboard.html';
-    } catch (error) {
-        console.error(error);
-    }
+    } catch (error) { console.error(error); }
 }
 
 // ==========================================
 // 5. INICIALIZAÇÃO
 // ==========================================
-// Chama as funções quando a página carrega
 window.onload = function() {
     carregarPerfil();
-    carregarSugestoes(); // <--- IMPORTANTE: Carrega a lista do autocompletar
+    carregarSugestoes();
 };

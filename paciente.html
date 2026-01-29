@@ -66,20 +66,15 @@
                         <div class="filtros-grafico-header filtros-header-wrapper">
                             <div class="titulo-select-row">
                                 <h3>Adesão ao Tratamento</h3>
-                                <select 
-                                    id="filtro-remedio-grafico" 
-                                    onchange="atualizarGrafico()" 
-                                    class="select-filtro"
-                                    aria-label="Filtrar gráfico por remédio"
-                                >
+                                <select id="filtro-remedio-grafico" onchange="atualizarGrafico()" class="select-filtro" aria-label="Filtrar gráfico por remédio">
                                     <option value="todos">Todos os Remédios</option>
                                 </select>
                             </div>
 
                             <div class="botoes-filtro">
-                                <button class="btn-filtro active" onclick="atualizarPeriodo(7, this)" aria-label="Filtrar por 7 dias">7 Dias</button>
-                                <button class="btn-filtro" onclick="atualizarPeriodo(30, this)" aria-label="Filtrar por 30 dias">30 Dias</button>
-                                <button class="btn-filtro" onclick="atualizarPeriodo(90, this)" aria-label="Filtrar por 90 dias">90 Dias</button>
+                                <button class="btn-filtro active" onclick="atualizarPeriodo(7, this)">7 Dias</button>
+                                <button class="btn-filtro" onclick="atualizarPeriodo(30, this)">30 Dias</button>
+                                <button class="btn-filtro" onclick="atualizarPeriodo(90, this)">90 Dias</button>
                             </div>
                         </div>
                         
@@ -96,19 +91,29 @@
                         <div id="lista-controle-remedios"></div>
 
                         <div class="novo-remedio-form">
-                            <h4>Novo Medicamento</h4>
+                            <h4><i class="fas fa-plus-circle"></i> Novo Medicamento</h4>
                             
-                            <div class="form-group-small">
-                                <label for="nome-remedio">Nome do Medicamento</label>
-                                <input 
-                                    type="text" 
-                                    id="nome-remedio" 
-                                    list="lista-sugestoes" 
-                                    placeholder="Digite ou selecione..." 
-                                    onchange="aplicarSugestao(this)"
-                                    aria-label="Nome do Remédio"
-                                >
-                                <datalist id="lista-sugestoes"></datalist>
+                            <div class="form-grid">
+                                <div class="form-group-small">
+                                    <label for="nome-remedio">Nome do Medicamento</label>
+                                    <input 
+                                        type="text" 
+                                        id="nome-remedio" 
+                                        list="lista-sugestoes" 
+                                        placeholder="Busque ou digite..." 
+                                        onchange="aplicarSugestao(this)"
+                                    >
+                                    <datalist id="lista-sugestoes"></datalist>
+                                </div>
+
+                                <div class="form-group-small">
+                                    <label for="duracao-remedio">Duração</label>
+                                    <input 
+                                        type="text" 
+                                        id="duracao-remedio" 
+                                        placeholder="Ex: 7 dias"
+                                    >
+                                </div>
                             </div>
 
                             <div class="form-group-small">
@@ -117,48 +122,35 @@
                                     type="text" 
                                     id="obs-remedio" 
                                     placeholder="Ex: 1 cp após o almoço (Automático)"
-                                    aria-label="Dosagem e Observação"
                                 >
                             </div>
                             
-<div class="form-group-small">
-    <label for="obs-remedio">Dosagem / Recomendação</label>
-    <input 
-        type="text" 
-        id="obs-remedio" 
-        placeholder="Ex: 1 cp após o almoço"
-    >
-</div>
-
-<div class="form-group-small">
-    <label for="duracao-remedio">Duração do Tratamento</label>
-    <input 
-        type="text" 
-        id="duracao-remedio" 
-        placeholder="Ex: 7 dias, 10 dias, Uso Contínuo..."
-    >
-</div>
-
-<div id="container-horarios" class="horarios-wrapper">
-    ```
-
-
-
-
-
-                            <div id="container-horarios" class="horarios-wrapper">
-                                <label>Horários</label>
-                                <div class="horario-row">
-                                    <input type="time" class="input-hora" aria-label="Horário do remédio">
+                            <div class="horarios-container">
+                                <label class="label-destaque">⏰ Horários das Doses</label>
+                                
+                                <div id="container-horarios" class="horario-row">
+                                    <input type="time" class="input-hora" aria-label="Horário da dose">
                                 </div>
+                                
+                                <button type="button" onclick="addInputHora()" class="btn-add-hora">
+                                    <i class="fas fa-plus"></i> Adicionar Horário
+                                </button>
                             </div>
                             
-                            <button type="button" onclick="addInputHora()" class="btn-text-action" aria-label="Adicionar mais um horário">+ Adicionar Horário</button>
+                            <div class="form-group-small">
+                                <label for="foto-remedio"><i class="fas fa-camera"></i> Foto (Opcional)</label>
+                                <input 
+                                    type="file" 
+                                    id="foto-remedio" 
+                                    accept="image/*" 
+                                    class="input-foto"
+                                    aria-label="Upload da foto do medicamento"
+                                >
+                            </div>
                             
-                            <label for="foto-remedio" class="mt-10 block">Foto do Remédio (Opcional)</label>
-                            <input type="file" id="foto-remedio" accept="image/*" class="input-file-small" aria-label="Carregar foto do remédio">
-                            
-                            <button onclick="salvarNovoRemedio()" class="btn-success mt-10">Salvar Medicamento</button>
+                            <button onclick="salvarNovoRemedio()" class="btn-salvar-remedio">
+                                Salvar Medicamento
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -219,7 +211,7 @@
             </div>
             
             <div class="form-group">
-                <label for="edit-remedio-horario">Horário</label>
+                <label for="edit-remedio-horario">Horário Principal</label>
                 <input type="time" id="edit-remedio-horario" required>
             </div>
             
@@ -231,6 +223,5 @@
     </div>
 
     <script src="script-perfil.js"></script>
-   
 </body>
 </html>
