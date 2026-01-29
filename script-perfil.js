@@ -1,338 +1,284 @@
 const API_URL = 'https://appana-xlcl.onrender.com';
-const pacienteId = localStorage.getItem('pacienteSelecionadoId');
-let meuGrafico = null;
-let diasFiltro = 7;
-let dadosPacienteAtual = null; // Guarda tudo (Info, Histórico, Remédios)
 
-document.addEventListener('DOMContentLoaded', () => {
+// Pega o ID do paciente da URL (ex: perfil-paciente.html?id=123)
+const urlParams = new URLSearchParams(window.location.search);
+const pacienteId = urlParams.get('id');
+
+// ==========================================
+// 1. LISTA DE SUGESTÕES (AUTOCOMPLETAR)
+// ==========================================
+const PROTOCOLOS_MEDICOS = {
+    "CAPTOPRIL 25mg": { nome: "Captopril 25mg", dose: "2 cp (Jejum - 1h antes ou 2h pós refeição)", horarios: ["11:00"] },
+    "ENALAPRIL 10mg": { nome: "Maleato de Enalapril 10mg", dose: "1 cp", horarios: ["20:00"] },
+    "LOSARTANA 50mg": { nome: "Losartana Potássica 50mg", dose: "1 cp", horarios: ["08:00"] },
+    "HIDROCLOROTIAZIDA 25mg": { nome: "Hidroclorotiazida 25mg", dose: "1 cp (Pela manhã - evitar noctúria)", horarios: ["08:00"] },
+    "ESPIRONOLACTONA 25mg": { nome: "Espironolactona 25mg", dose: "2 cp", horarios: ["08:00"] },
+    "SINVASTATINA 20mg": { nome: "Sinvastatina 20mg", dose: "1 cp", horarios: ["20:00"] },
+    "METFORMINA 500mg": { nome: "Cloridrato de Metformina 500mg", dose: "1 cp (Junto com café da manhã)", horarios: ["08:00"] },
+    "GLICAZIDA 30mg": { nome: "Glicazida 30mg", dose: "1 cp", horarios: ["08:00"] },
+    "AMOXICILINA + CLAVULANATO (8/8h)": { nome: "Amoxicilina 500mg + Clavulanato 125mg", dose: "1 cp (Duração: 7 a 10 dias)", horarios: ["07:00", "15:00", "23:00"] },
+    "AZITROMICINA 500mg": { nome: "Azitromicina 500mg", dose: "1 cp (Duração: 3 dias)", horarios: ["08:00"] },
+    "LEVOFLOXACINO 500mg": { nome: "Levofloxacino 500mg", dose: "1 cp (7 a 10 dias - Longe de leite/antiácidos)", horarios: ["15:00"] },
+    "LEVOFLOXACINO 750mg": { nome: "Levofloxacino 750mg (1cp 500 + 1cp 250)", dose: "Dose única (5 dias - Longe de leite/antiácidos)", horarios: ["15:00"] },
+    "LEVOTIROXINA 25mcg": { nome: "Levotiroxina Sódica 25mcg", dose: "1 cp (Jejum absoluto - min 30min antes café)", horarios: ["07:00"] },
+    "LEVOTIROXINA 50mcg": { nome: "Levotiroxina Sódica 50mcg", dose: "1 cp (Jejum absoluto - min 30min antes café)", horarios: ["07:00"] },
+    "LEVOTIROXINA 100mcg": { nome: "Levotiroxina Sódica 100mcg", dose: "1 cp (Jejum absoluto - min 30min antes café)", horarios: ["07:00"] }
+};
+
+// Carrega as opções na lista invisível ao abrir a página
+function carregarSugestoes() {
+    const datalist = document.getElementById('lista-sugestoes');
+    if (!datalist) return;
+    datalist.innerHTML = '';
+    Object.keys(PROTOCOLOS_MEDICOS).forEach(chave => {
+        const option = document.createElement('option');
+        option.value = chave;
+        datalist.appendChild(option);
+    });
+}
+
+// Preenche os campos quando o médico seleciona
+function aplicarSugestao(input) {
+    const dados = PROTOCOLOS_MEDICOS[input.value];
+    if (dados) {
+        document.getElementById('nome-remedio').value = dados.nome;
+        document.getElementById('obs-remedio').value = dados.dose;
+        
+        // Limpa horários antigos
+        const container = document.getElementById('container-horarios');
+        container.innerHTML = '<label>Horários</label>';
+        
+        // Adiciona os novos horários
+        dados.horarios.forEach(hora => {
+            const div = document.createElement('div');
+            div.className = 'horario-row';
+            div.innerHTML = `<input type="time" class="input-hora" value="${hora}">`;
+            container.appendChild(div);
+        });
+    }
+}
+
+// ==========================================
+// 2. FUNÇÕES PRINCIPAIS DO PERFIL
+// ==========================================
+
+async function carregarPerfil() {
     if (!pacienteId) {
+        alert("Paciente não especificado.");
         window.location.href = 'dashboard.html';
         return;
     }
-    carregarDadosPerfil();
-});
 
-// ==========================================
-// 1. CARREGAMENTO E FILTROS
-// ==========================================
-
-async function carregarDadosPerfil() {
     try {
         const response = await fetch(`${API_URL}/perfil-paciente/${pacienteId}`);
         const data = await response.json();
-        
-        // Guarda TUDO na memória global
-        dadosPacienteAtual = data; 
 
-        // Dados Pessoais
-        document.getElementById('detalhe-nome').innerText = data.info.nome;
-        document.getElementById('detalhe-nasc').innerText = data.info.data_nascimento ? 
-            new Date(data.info.data_nascimento).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : '---';
-        document.getElementById('detalhe-whats').innerText = data.info.whatsapp;
-        
-        const gestorDisplay = document.getElementById('detalhe-gestor');
-        if(gestorDisplay) {
-            gestorDisplay.innerText = data.info.gestor || '---';
+        if (response.ok) {
+            // Preenche Card Principal
+            document.getElementById('detalhe-nome').innerText = data.info.nome;
+            document.getElementById('detalhe-whats').innerText = data.info.whatsapp;
+            document.getElementById('detalhe-gestor').innerText = data.info.gestor || "---";
+
+            // Formata Data de Nascimento
+            const dataNasc = new Date(data.info.data_nascimento);
+            document.getElementById('detalhe-nasc').innerText = dataNasc.toLocaleDateString('pt-BR');
+
+            // Preenche Listas
+            listarMedicamentos(data.medicamentos);
+            listarAnotacoes(data.anotacoes);
+            
+        } else {
+            alert("Erro ao carregar paciente.");
         }
-
-        // --- PREENCHER O SELECT DO GRÁFICO (NOVO) ---
-        preencherSelectRemedios(data.medicamentos);
-
-        // Renderização
-        renderizarNotas(data.anotacoes);
-        renderizarControleRemedios(data.medicamentos);
-        atualizarGrafico(); // Chama a função que já filtra e desenha
-        renderizarLogDiario(data.historico);
-        
     } catch (error) {
-        console.error("Erro ao carregar dados:", error);
+        console.error("Erro:", error);
     }
 }
 
-// Função nova para preencher o dropdown
-function preencherSelectRemedios(medicamentos) {
-    const select = document.getElementById('filtro-remedio-grafico');
-    // Limpa mantendo apenas o "Todos"
-    select.innerHTML = '<option value="todos">Todos os Remédios</option>';
-    
-    // Cria um Set para não repetir nomes iguais
-    const nomesUnicos = new Set();
-    
-    medicamentos.forEach(m => {
-        // Se ainda não adicionamos esse nome...
-        if (!nomesUnicos.has(m.nome_remedio)) {
-            const option = document.createElement('option');
-            // Usaremos o NOME como valor para filtrar todos os horários daquele remédio
-            option.value = m.nome_remedio; 
-            option.innerText = m.nome_remedio;
-            select.appendChild(option);
-            nomesUnicos.add(m.nome_remedio);
-        }
-    });
-}
+function listarMedicamentos(lista) {
+    const container = document.getElementById('lista-controle-remedios');
+    container.innerHTML = '';
 
-// Função atualizada para redesenhar quando muda data ou remédio
-function atualizarGrafico() {
-    if (!dadosPacienteAtual || !dadosPacienteAtual.historico) return;
-    gerarGraficoAdesao(dadosPacienteAtual.historico);
-}
-
-function atualizarPeriodo(dias, btn) {
-    diasFiltro = dias;
-    document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    atualizarGrafico();
-}
-
-// ==========================================
-// 4. GRÁFICOS E LOGS (LÓGICA DO FILTRO AQUI)
-// ==========================================
-
-function gerarGraficoAdesao(historico) {
-    const ctx = document.getElementById('graficoAdesao').getContext('2d');
-    
-    // 1. Filtro de Data
-    const dataLimite = new Date();
-    dataLimite.setDate(dataLimite.getDate() - diasFiltro);
-
-    // 2. Filtro de Remédio (NOVO)
-    const remedioSelecionado = document.getElementById('filtro-remedio-grafico').value;
-
-    const filtrado = historico.filter(h => {
-        const dataOk = new Date(h.data_dose) >= dataLimite;
-        
-        // Se for "todos", passa direto. Se não, compara o nome do remédio.
-        // O backend precisa mandar o nome do remédio no histórico. 
-        // Se seu backend manda 'medicamento_id', precisamos achar o nome.
-        
-        // Lógica: Vamos assumir que temos acesso ao nome.
-        // Se o histórico só tem ID, comparamos ID. Mas aqui vou filtrar pelo NOME 
-        // cruzando com a lista de medicamentos salva em 'dadosPacienteAtual'.
-        
-        let remedioOk = true;
-        if (remedioSelecionado !== 'todos') {
-            // Acha o medicamento correspondente a esse histórico
-            const remedioInfo = dadosPacienteAtual.medicamentos.find(m => m.id === h.medicamento_id);
-            if (remedioInfo && remedioInfo.nome_remedio === remedioSelecionado) {
-                remedioOk = true;
-            } else {
-                remedioOk = false;
-            }
-        }
-
-        return dataOk && remedioOk;
-    });
-
-    // Contagem
-    const contagem = { tomou: 0, atraso: 0, nao_tomou: 0 };
-    filtrado.forEach(h => {
-        if (contagem[h.status] !== undefined) contagem[h.status]++;
-    });
-
-    // Desenha
-    if (meuGrafico) meuGrafico.destroy();
-    
-    // Verifica se tem dados para não mostrar gráfico vazio feio
-    const total = contagem.tomou + contagem.atraso + contagem.nao_tomou;
-    
-    meuGrafico = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Tomou', 'Atraso', 'Não Tomou'],
-            datasets: [{ 
-                data: [contagem.tomou, contagem.atraso, contagem.nao_tomou], 
-                backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
-                borderWidth: 0 
-            }]
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false,
-            plugins: { 
-                legend: { position: 'bottom' },
-                title: {
-                    display: total === 0,
-                    text: 'Sem dados para este filtro',
-                    position: 'top'
-                }
-            }
-        }
-    });
-}
-
-// ==========================================
-// RESTO DO CÓDIGO (ANOTAÇÕES, REMÉDIOS, ETC...)
-// MANTENHA AS OUTRAS FUNÇÕES IGUAIS AS ANTERIORES
-// ==========================================
-
-function renderizarNotas(notas) {
-    const container = document.getElementById('historico-notas');
-    if (!notas || notas.length === 0) {
-        container.innerHTML = "<p class='text-muted-small'>Nenhuma anotação registrada.</p>";
+    if (lista.length === 0) {
+        container.innerHTML = '<p class="text-muted">Nenhum medicamento cadastrado.</p>';
         return;
     }
-    container.innerHTML = notas.map(n => `
-        <div class="nota-item">
-            <div class="nota-actions">
-                <button onclick="prepararEdicaoNota(${n.id})" class="btn-edit-small"><i class="fas fa-edit"></i></button>
-                <button onclick="excluirNota(${n.id})" class="btn-delete-small"><i class="fas fa-trash"></i></button>
+
+    lista.forEach(med => {
+        const card = document.createElement('div');
+        card.className = 'remedio-item';
+        // Mostra o nome e o horário. Se tiver foto, mostra ícone.
+        card.innerHTML = `
+            <div class="remedio-info">
+                <strong>${med.nome_remedio}</strong>
+                <span class="remedio-hora"><i class="far fa-clock"></i> ${med.horario}</span>
             </div>
-            <span class="nota-data">${new Date(n.data_criacao).toLocaleString('pt-BR')}</span>
-            <p id="texto-nota-${n.id}">${n.texto}</p>
-        </div>
-    `).join('');
+            <button onclick="excluirRemedio(${med.id})" class="btn-icon-delete"><i class="fas fa-trash"></i></button>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function listarAnotacoes(lista) {
+    const container = document.getElementById('historico-notas');
+    container.innerHTML = '';
+
+    if (lista.length === 0) {
+        container.innerHTML = '<p class="text-muted-small">Nenhuma anotação.</p>';
+        return;
+    }
+
+    lista.forEach(nota => {
+        const div = document.createElement('div');
+        div.className = 'nota-item';
+        const data = new Date(nota.data_criacao).toLocaleDateString('pt-BR');
+        div.innerHTML = `
+            <p>${nota.texto}</p>
+            <small>${data}</small>
+            <button onclick="excluirNota(${nota.id})" class="btn-small-delete">x</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// ==========================================
+// 3. FUNÇÕES DE ADICIONAR (SALVAR)
+// ==========================================
+
+// Adiciona mais um campo de horário na tela
+function addInputHora() {
+    const container = document.getElementById('container-horarios');
+    const div = document.createElement('div');
+    div.className = 'horario-row';
+    div.innerHTML = `<input type="time" class="input-hora">`;
+    container.appendChild(div);
+}
+
+// CORREÇÃO AQUI: Salvar Novo Remédio
+async function salvarNovoRemedio() {
+    // 1. Pega o Nome e a Dose
+    const nomeInput = document.getElementById('nome-remedio').value;
+    const doseInput = document.getElementById('obs-remedio').value;
+
+    if (!nomeInput) {
+        alert("Digite o nome do remédio.");
+        return;
+    }
+
+    // CONCATENAÇÃO: Junta Nome + Dose para salvar no banco (já que não temos coluna dose ainda)
+    const nomeFinal = doseInput ? `${nomeInput} (${doseInput})` : nomeInput;
+
+    // 2. Pega TODOS os horários preenchidos
+    const inputsHoras = document.querySelectorAll('.input-hora');
+    let listaHorarios = [];
+    
+    inputsHoras.forEach(input => {
+        if (input.value) {
+            listaHorarios.push(input.value);
+        }
+    });
+
+    if (listaHorarios.length === 0) {
+        alert("Adicione pelo menos um horário.");
+        return;
+    }
+
+    const fotoInput = document.getElementById('foto-remedio');
+    const formData = new FormData();
+    formData.append('pacienteId', pacienteId);
+    formData.append('nome_remedio', nomeFinal); // Envia o nome completo
+    formData.append('horarios', JSON.stringify(listaHorarios)); // Envia lista de horários
+    
+    if (fotoInput.files[0]) {
+        formData.append('foto', fotoInput.files[0]);
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/medicamentos`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            alert("Medicamento salvo!");
+            carregarPerfil(); // Recarrega a tela
+            
+            // Limpa os campos
+            document.getElementById('nome-remedio').value = '';
+            document.getElementById('obs-remedio').value = '';
+            document.getElementById('container-horarios').innerHTML = `
+                <label>Horários</label>
+                <div class="horario-row"><input type="time" class="input-hora"></div>
+            `;
+        } else {
+            alert("Erro ao salvar medicamento.");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Erro de conexão.");
+    }
 }
 
 async function salvarNovaNota() {
-    const campo = document.getElementById('nova-nota-texto');
-    if (!campo.value.trim()) return;
+    const texto = document.getElementById('nova-nota-texto').value;
+    if (!texto) return;
+
     try {
-        await fetch(`${API_URL}/pacientes/${pacienteId}/anotacoes`, {
+        const response = await fetch(`${API_URL}/pacientes/${pacienteId}/anotacoes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ anotacao: campo.value })
+            body: JSON.stringify({ anotacao: texto })
         });
-        campo.value = "";
-        carregarDadosPerfil();
-    } catch (error) { alert("Erro ao salvar nota."); }
+
+        if (response.ok) {
+            document.getElementById('nova-nota-texto').value = '';
+            carregarPerfil();
+        }
+    } catch (error) {
+        console.error(error);
+    }
 }
 
-function prepararEdicaoNota(id) {
-    const p = document.getElementById(`texto-nota-${id}`);
-    const textoAtual = p.innerText;
-    p.innerHTML = `<textarea id="edit-campo-${id}" class="edit-nota-area">${textoAtual}</textarea>
-        <div class="nota-edit-actions"><button onclick="salvarEdicaoNota(${id})" class="btn-save-small">Salvar</button>
-        <button onclick="carregarDadosPerfil()" class="btn-cancel-small">Cancelar</button></div>`;
-}
+// ==========================================
+// 4. FUNÇÕES DE EXCLUIR
+// ==========================================
 
-async function salvarEdicaoNota(id) {
-    const novoTexto = document.getElementById(`edit-campo-${id}`).value;
-    if (!novoTexto.trim()) return alert("Texto vazio.");
+async function excluirRemedio(id) {
+    if (!confirm("Tem certeza que deseja excluir este medicamento?")) return;
     try {
-        const res = await fetch(`${API_URL}/anotacoes/${id}`, {
-            method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({texto: novoTexto})
-        });
-        if(res.ok) carregarDadosPerfil();
-    } catch(e) { alert("Erro conexão"); }
+        await fetch(`${API_URL}/medicamentos/${id}`, { method: 'DELETE' });
+        carregarPerfil();
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 async function excluirNota(id) {
-    if(confirm("Excluir?")) {
-        await fetch(`${API_URL}/anotacoes/${id}`, {method: 'DELETE'});
-        carregarDadosPerfil();
+    if (!confirm("Apagar anotação?")) return;
+    try {
+        await fetch(`${API_URL}/anotacoes/${id}`, { method: 'DELETE' });
+        carregarPerfil();
+    } catch (error) {
+        console.error(error);
     }
-}
-
-function renderizarControleRemedios(remedios) {
-    const lista = document.getElementById('lista-controle-remedios');
-    if (remedios.length === 0) {
-        lista.innerHTML = '<p class="text-muted-small">Nenhum medicamento.</p>'; return;
-    }
-    const grupos = {};
-    remedios.forEach(r => {
-        const nomeChave = r.nome_remedio.trim().toLowerCase();
-        if (!grupos[nomeChave]) grupos[nomeChave] = { nome: r.nome_remedio, imagem: r.imagem_url, horarios: [] };
-        grupos[nomeChave].horarios.push({ id: r.id, hora: r.horario });
-    });
-    Object.values(grupos).forEach(g => g.horarios.sort((a,b)=>a.hora.localeCompare(b.hora)));
-
-    lista.innerHTML = Object.values(grupos).map(g => `
-        <div class="card-remedio-agrupado">
-            <div class="remedio-header">
-                <img src="${g.imagem ? API_URL + g.imagem : 'https://via.placeholder.com/60'}" class="remedio-thumb-large">
-                <div class="remedio-titulo"><strong>${g.nome}</strong><small>${g.horarios.length} horários</small></div>
-            </div>
-            <div class="lista-horarios-wrapper">
-                ${g.horarios.map(h => `
-                    <div class="horario-row"><div class="hora-badge"><i class="fas fa-clock"></i> ${h.hora}</div>
-                    <div class="acoes-wrapper"><div class="check-actions-mini">
-                    <button onclick="registrarDose(${h.id}, 'tomou')" class="btn-check-mini"><i class="fas fa-check"></i></button>
-                    <button onclick="registrarDose(${h.id}, 'nao_tomou')" class="btn-x-mini"><i class="fas fa-times"></i></button></div>
-                    <div class="admin-actions-mini"><button onclick="prepararEdicaoRemedio(${h.id}, '${g.nome}', '${h.hora}')" class="btn-icon-edit"><i class="fas fa-pen"></i></button>
-                    <button onclick="excluirRemedio(${h.id})" class="btn-icon-del"><i class="fas fa-trash"></i></button></div></div></div>
-                `).join('')}
-            </div>
-        </div>
-    `).join('');
-}
-
-async function excluirRemedio(id) { if(confirm("Excluir?")) { await fetch(`${API_URL}/medicamentos/${id}`, {method:'DELETE'}); carregarDadosPerfil(); }}
-
-function prepararEdicaoRemedio(id, n, h) {
-    document.getElementById('edit-remedio-id').value = id;
-    document.getElementById('edit-remedio-nome').value = n;
-    document.getElementById('edit-remedio-horario').value = h;
-    document.getElementById('modal-editar-remedio').style.display = 'flex';
-}
-
-async function salvarEdicaoRemedio() {
-    const id = document.getElementById('edit-remedio-id').value;
-    const nome = document.getElementById('edit-remedio-nome').value;
-    const horario = document.getElementById('edit-remedio-horario').value;
-    await fetch(`${API_URL}/medicamentos/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({nome_remedio: nome, horario})});
-    document.getElementById('modal-editar-remedio').style.display='none'; carregarDadosPerfil();
-}
-
-async function salvarNovoRemedio() {
-    const nome = document.getElementById('remedio-nome').value;
-    const horarios = Array.from(document.querySelectorAll('.input-hora')).map(i=>i.value).filter(h=>h!=="");
-    const foto = document.getElementById('foto-remedio').files[0];
-    if(!nome || horarios.length===0) return alert("Preencha tudo");
-    const fd = new FormData();
-    fd.append('pacienteId', pacienteId); fd.append('nome_remedio', nome); fd.append('horarios', JSON.stringify(horarios));
-    if(foto) fd.append('foto', foto);
-    await fetch(`${API_URL}/medicamentos`, {method:'POST', body:fd});
-    document.getElementById('remedio-nome').value=""; document.getElementById('container-horarios').innerHTML='<input type="time" class="input-hora">';
-    carregarDadosPerfil();
-}
-
-function addInputHora() { document.getElementById('container-horarios').innerHTML += '<input type="time" class="input-hora">'; }
-
-function renderizarLogDiario(historico) {
-    const container = document.getElementById('lista-diaria-log');
-    if(!container) return; container.innerHTML="";
-    const recents = [...historico].sort((a,b)=>new Date(b.data_dose)-new Date(a.data_dose)).slice(0,15);
-    recents.forEach(log => {
-        container.innerHTML += `<div class="log-item ${log.status}"><span><strong>${new Date(log.data_dose).toLocaleDateString('pt-BR')}</strong></span><span class="status-texto">${log.status}</span></div>`;
-    });
-}
-
-async function registrarDose(id, status) {
-    await fetch(`${API_URL}/registrar-dose`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({medicamento_id: id, status, atraso_minutos:0})});
-    carregarDadosPerfil();
-}
-
-function abrirModalEdicao() {
-    if(dadosPacienteAtual) {
-        document.getElementById('edit-nome').value = dadosPacienteAtual.info.nome;
-        document.getElementById('edit-whats').value = dadosPacienteAtual.info.whatsapp;
-        document.getElementById('edit-gestor').value = dadosPacienteAtual.info.gestor || '';
-        if(dadosPacienteAtual.info.data_nascimento) document.getElementById('edit-nasc').value = dadosPacienteAtual.info.data_nascimento.split('T')[0];
-    }
-    document.getElementById('modal-editar-paciente').style.display = 'flex';
-}
-
-function fecharModalEdicao() { document.getElementById('modal-editar-paciente').style.display = 'none'; }
-
-async function atualizarPerfil(event) {
-    event.preventDefault();
-    const g = document.getElementById('edit-gestor').value;
-    if(g.length!==5) return alert("Gestor deve ter 5 dígitos");
-    await fetch(`${API_URL}/pacientes/${pacienteId}`, {
-        method: 'PUT', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-            nome: document.getElementById('edit-nome').value,
-            whatsapp: document.getElementById('edit-whats').value,
-            data_nascimento: document.getElementById('edit-nasc').value,
-            gestor: g
-        })
-    });
-    fecharModalEdicao(); carregarDadosPerfil();
 }
 
 async function excluirPaciente() {
-    if(confirm("Excluir permanentemente?")) {
-        await fetch(`${API_URL}/pacientes/${pacienteId}`, {method:'DELETE'});
-        window.location.href='dashboard.html';
+    if (!confirm("ATENÇÃO: Isso apagará todo o histórico e medicamentos deste paciente. Continuar?")) return;
+    try {
+        await fetch(`${API_URL}/pacientes/${pacienteId}`, { method: 'DELETE' });
+        alert("Paciente removido.");
+        window.location.href = 'dashboard.html';
+    } catch (error) {
+        console.error(error);
     }
 }
+
+// ==========================================
+// 5. INICIALIZAÇÃO
+// ==========================================
+// Chama as funções quando a página carrega
+window.onload = function() {
+    carregarPerfil();
+    carregarSugestoes(); // <--- IMPORTANTE: Carrega a lista do autocompletar
+};
