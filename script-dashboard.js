@@ -53,7 +53,7 @@ async function carregarPacientes() {
 
             // Clique leva ao perfil
             card.onclick = function() {
-                window.location.href = `perfil-paciente.html?id=${paciente.id}`;
+                window.location.href = `paciente.html?id=${paciente.id}`;
             };
             
             // Efeito visual hover
